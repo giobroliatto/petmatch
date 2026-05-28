@@ -1,0 +1,231 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+enum UserRole {
+  TUTOR
+  PROVIDER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum ServiceType {
+  GROOMING
+  DOG_WALKING
+  VETERINARY
+  TRAINING
+  SITTING
+  DAYCARE
+  TRANSPORT
+}
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  OTHER
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  passwordHash  String?
+  name          String
+  phone         String?
+  avatarUrl     String?
+  roles         UserRole[]
+  emailVerified DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tutorProfile    TutorProfile?
+  providerProfile ProviderProfile?
+  sentMessages    Message[]       @relation("SentMessages")
+  accounts        Account[]
+  sessions        Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TutorProfile {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pets      Pet[]
+  bookings  Booking[]
+  favorites Favorite[]
+}
+
+model ProviderProfile {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  bio           String?
+  verified      Boolean     @default(false)
+  verifiedAt    DateTime?
+  city          String?
+  state         String?
+  zipCode       String?
+  latitude      Float?
+  longitude     Float?
+  radiusKm      Float       @default(10)
+  serviceTypes  ServiceType[]
+  galleryUrls   String[]
+  embedding     Unsupported("vector(1536)")?
+  averageRating Float       @default(0)
+  totalReviews  Int         @default(0)
+  qualityTags   String[]
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services      Service[]
+  availability  Availability[]
+  bookings      Booking[]
+  reviews       Review[]
+  favorites     Favorite[]
+}
+
+model Service {
+  id          String          @id @default(cuid())
+  providerId  String
+  type        ServiceType
+  name        String
+  description String?
+  price       Float
+  durationMin Int
+  homeVisit   Boolean         @default(false)
+  active      Boolean         @default(true)
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+}
+
+model Availability {
+  id         String          @id @default(cuid())
+  providerId String
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model Pet {
+  id            String       @id @default(cuid())
+  tutorId       String
+  name          String
+  species       PetSpecies
+  breed         String?
+  birthDate     DateTime?
+  weightKg      Float?
+  neutered      Boolean      @default(false)
+  photoUrl      String?
+  notes         String?
+  embedding     Unsupported("vector(1536)")?
+  tutor         TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  healthRecords HealthRecord[]
+  bookings      Booking[]
+}
+
+model HealthRecord {
+  id          String    @id @default(cuid())
+  petId       String
+  title       String
+  description String?
+  date        DateTime
+  nextDueDate DateTime?
+  pet         Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id          String          @id @default(cuid())
+  tutorId     String
+  providerId  String
+  petId       String
+  serviceId   String
+  status      BookingStatus   @default(PENDING)
+  scheduledAt DateTime
+  completedAt DateTime?
+  notes       String?
+  briefing    String?
+  totalPrice  Float
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tutor       TutorProfile    @relation(fields: [tutorId], references: [id])
+  provider    ProviderProfile @relation(fields: [providerId], references: [id])
+  pet         Pet             @relation(fields: [petId], references: [id])
+  service     Service         @relation(fields: [serviceId], references: [id])
+  review      Review?
+  messages    Message[]
+}
+
+model Review {
+  id            String          @id @default(cuid())
+  bookingId     String          @unique
+  providerId    String
+  rating        Int
+  comment       String?
+  providerReply String?
+  createdAt     DateTime        @default(now())
+  booking       Booking         @relation(fields: [bookingId], references: [id])
+  provider      ProviderProfile @relation(fields: [providerId], references: [id])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  bookingId String
+  senderId  String
+  content   String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+}
+
+model Favorite {
+  id         String          @id @default(cuid())
+  tutorId    String
+  providerId String
+  createdAt  DateTime        @default(now())
+  tutor      TutorProfile    @relation(fields: [tutorId], references: [id])
+  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+
+  @@unique([tutorId, providerId])
+}
