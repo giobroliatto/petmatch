@@ -31,6 +31,7 @@ import { useProviderProfile } from '@/lib/hooks/useProviders'
 import { usePets } from '@/lib/hooks/usePets'
 import { useCreateBooking } from '@/lib/hooks/useBookings'
 import { formatPrice, SERVICE_TYPE_LABELS } from '@/lib/providers'
+import { SPECIES_LABELS, type PetSpecies } from '@/lib/pets'
 
 const bookingSchema = z.object({
   serviceId: z.string().min(1, 'Selecione um serviço'),
@@ -217,7 +218,7 @@ export default function NewBookingPage({
                           <SelectItem key={pet.id} value={pet.id}>
                             {pet.name}{' '}
                             <span className="text-muted-foreground text-xs capitalize">
-                              · {pet.species.toLowerCase()}{pet.breed ? ` · ${pet.breed}` : ''}
+                              · {SPECIES_LABELS[pet.species as PetSpecies] ?? pet.species}{pet.breed ? ` · ${pet.breed}` : ''}
                             </span>
                           </SelectItem>
                         ))}

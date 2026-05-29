@@ -15,7 +15,6 @@ import {
   CheckCircle,
   XCircle,
   Flag,
-  Sparkles,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +25,9 @@ import { Label } from '@/components/ui/label'
 import { useBooking, useConfirmBooking, useRejectBooking, useCompleteBooking } from '@/lib/hooks/useBookings'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/bookings'
 import { formatPrice } from '@/lib/providers'
+import { SPECIES_LABELS, type PetSpecies } from '@/lib/pets'
 import { BookingChat } from '@/components/bookings/BookingChat'
+import { BriefingCard } from '@/components/bookings/BriefingCard'
 
 const CHAT_ENABLED_STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS']
 
@@ -100,9 +101,9 @@ export default function ProviderBookingDetailPage({
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl px-4 py-8 space-y-5">
       {/* Back + title */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/provider/dashboard">
             <ArrowLeft className="h-5 w-5" />
@@ -123,7 +124,10 @@ export default function ProviderBookingDetailPage({
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Briefing — full width, destaque */}
+      {booking.briefing && <BriefingCard briefing={booking.briefing} />}
+
+      <div className="grid md:grid-cols-3 gap-5">
         {/* Left: Booking info + actions */}
         <div className="md:col-span-1 space-y-4">
           {/* Details */}
@@ -144,8 +148,8 @@ export default function ProviderBookingDetailPage({
                   <PawPrint className="h-3.5 w-3.5" />
                   {booking.pet.name}
                 </p>
-                <p className="text-muted-foreground text-xs capitalize">
-                  {booking.pet.species.toLowerCase()}
+                <p className="text-muted-foreground text-xs">
+                  {SPECIES_LABELS[booking.pet.species as PetSpecies] ?? booking.pet.species}
                   {booking.pet.breed ? ` · ${booking.pet.breed}` : ''}
                   {booking.pet.weightKg ? ` · ${booking.pet.weightKg}kg` : ''}
                   {booking.pet.neutered ? ' · castrado' : ''}
@@ -263,22 +267,6 @@ export default function ProviderBookingDetailPage({
             </Card>
           )}
 
-          {/* AI Briefing */}
-          {booking.briefing && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Briefing IA do pet
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                  {booking.briefing}
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Right: Chat */}

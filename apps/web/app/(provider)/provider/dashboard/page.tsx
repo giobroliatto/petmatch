@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { stripMarkdown } from '@/lib/utils'
 import {
   Sheet,
   SheetContent,
@@ -250,7 +251,7 @@ export default function ProviderDashboardPage() {
                         Briefing IA
                       </p>
                       <p className="text-xs text-muted-foreground line-clamp-3">
-                        {booking.briefing}
+                        {booking.briefing ? stripMarkdown(booking.briefing) : ''}
                       </p>
                     </div>
                   )}

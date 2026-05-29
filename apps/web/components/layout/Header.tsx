@@ -27,6 +27,7 @@ function getTutorLinks(): NavLink[] {
 function getProviderLinks(): NavLink[] {
   return [
     { href: '/provider/dashboard', label: 'Painel' },
+    { href: '/provider/bookings', label: 'Reservas' },
     { href: '/provider/setup', label: 'Meus serviços' },
   ]
 }

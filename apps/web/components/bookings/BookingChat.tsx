@@ -23,7 +23,7 @@ export function BookingChat({ bookingId, currentUserId, disabled = false }: Book
   const { data: messages = [], isLoading } = useMessages(bookingId)
   const sendMessage = useSendMessage(bookingId)
   const [content, setContent] = useState('')
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   // Poll every 15 seconds
   useEffect(() => {
@@ -35,9 +35,10 @@ export function BookingChat({ bookingId, currentUserId, disabled = false }: Book
     return () => clearInterval(interval)
   }, [bookingId, queryClient, session])
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom within the chat container (not the page)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = messagesContainerRef.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   async function handleSend(e: React.FormEvent) {
@@ -64,7 +65,10 @@ export function BookingChat({ bookingId, currentUserId, disabled = false }: Book
   return (
     <div className="flex flex-col h-[420px]">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-muted/30 rounded-t-lg">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto space-y-3 p-4 bg-muted/30 rounded-t-lg"
+      >
         {messages.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground mt-8">
             Nenhuma mensagem ainda. Inicie a conversa!
@@ -99,7 +103,6 @@ export function BookingChat({ bookingId, currentUserId, disabled = false }: Book
             )
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input area */}

@@ -1,7 +1,6 @@
 'use client'
 
 import { use } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
@@ -15,7 +14,6 @@ import {
   MessageSquare,
   Loader2,
   XCircle,
-  Sparkles,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,11 +22,12 @@ import { Separator } from '@/components/ui/separator'
 import { useBooking, useCancelBooking } from '@/lib/hooks/useBookings'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/bookings'
 import { formatPrice } from '@/lib/providers'
+import { SPECIES_LABELS, type PetSpecies } from '@/lib/pets'
 import { BookingChat } from '@/components/bookings/BookingChat'
+import { BriefingCard } from '@/components/bookings/BriefingCard'
 import { ReviewForm } from '@/components/bookings/ReviewForm'
 
 const CHAT_ENABLED_STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS']
-const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED', 'REJECTED']
 
 export default function TutorBookingDetailPage({
   params,
@@ -36,7 +35,6 @@ export default function TutorBookingDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const router = useRouter()
   const { data: session } = useSession()
   const { data: booking, isLoading, error } = useBooking(id)
   const cancelBooking = useCancelBooking()
@@ -80,9 +78,9 @@ export default function TutorBookingDetailPage({
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl px-4 py-8 space-y-5">
       {/* Back + title */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/tutor/bookings">
             <ArrowLeft className="h-5 w-5" />
@@ -103,10 +101,12 @@ export default function TutorBookingDetailPage({
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Briefing — full width, destaque */}
+      {booking.briefing && <BriefingCard briefing={booking.briefing} />}
+
+      <div className="grid md:grid-cols-3 gap-5">
         {/* Left: Booking info */}
         <div className="md:col-span-1 space-y-4">
-          {/* Details card */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Detalhes</CardTitle>
@@ -118,20 +118,19 @@ export default function TutorBookingDetailPage({
                 </p>
                 <p className="font-medium">{booking.provider.user.name}</p>
                 {booking.provider.city && (
-                  <p className="text-muted-foreground">{booking.provider.city}</p>
+                  <p className="text-muted-foreground text-xs">{booking.provider.city}</p>
                 )}
               </div>
               <Separator />
               <div>
-                <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
-                  Pet
-                </p>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Pet</p>
                 <p className="font-medium flex items-center gap-1">
                   <PawPrint className="h-3.5 w-3.5" />
                   {booking.pet.name}
                 </p>
-                <p className="text-muted-foreground text-xs capitalize">
-                  {booking.pet.species.toLowerCase()}{booking.pet.breed ? ` · ${booking.pet.breed}` : ''}
+                <p className="text-muted-foreground text-xs">
+                  {SPECIES_LABELS[booking.pet.species as PetSpecies] ?? booking.pet.species}
+                  {booking.pet.breed ? ` · ${booking.pet.breed}` : ''}
                 </p>
               </div>
               <Separator />
@@ -151,19 +150,17 @@ export default function TutorBookingDetailPage({
                 <span className="text-muted-foreground">Total</span>
                 <span className="font-bold text-base">{formatPrice(booking.totalPrice)}</span>
               </div>
-
               {booking.notes && (
                 <>
                   <Separator />
                   <div>
                     <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
-                      Suas observações
+                      Observações
                     </p>
                     <p className="text-sm">{booking.notes}</p>
                   </div>
                 </>
               )}
-
               {canCancel && (
                 <Button
                   variant="outline"
@@ -183,24 +180,7 @@ export default function TutorBookingDetailPage({
             </CardContent>
           </Card>
 
-          {/* AI Briefing */}
-          {booking.briefing && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Briefing gerado por IA
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                  {booking.briefing}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Review (if exists) */}
+          {/* Review display */}
           {booking.review && (
             <Card>
               <CardHeader className="pb-2">
@@ -230,9 +210,8 @@ export default function TutorBookingDetailPage({
           )}
         </div>
 
-        {/* Right: Chat + Review form */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Chat */}
+        {/* Right: Chat */}
+        <div className="md:col-span-2">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -248,29 +227,23 @@ export default function TutorBookingDetailPage({
               />
             </CardContent>
           </Card>
-
-          {/* Review form */}
-          {showReviewForm && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  Avaliar prestador
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReviewForm bookingId={booking.id} />
-              </CardContent>
-            </Card>
-          )}
-
-          {booking.status === 'COMPLETED' && booking.review && (
-            <p className="text-center text-sm text-muted-foreground py-4">
-              Você já avaliou este serviço.
-            </p>
-          )}
         </div>
       </div>
+
+      {/* Review form — full width abaixo */}
+      {showReviewForm && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              Avaliar prestador
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReviewForm bookingId={booking.id} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
