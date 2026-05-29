@@ -112,7 +112,7 @@ model ProviderProfile {
   radiusKm      Float       @default(10)
   serviceTypes  ServiceType[]
   galleryUrls   String[]
-  embedding     Unsupported("vector(1536)")?
+  embedding     Unsupported("vector(1024)")?
   averageRating Float       @default(0)
   totalReviews  Int         @default(0)
   qualityTags   String[]
@@ -158,7 +158,7 @@ model Pet {
   neutered      Boolean      @default(false)
   photoUrl      String?
   notes         String?
-  embedding     Unsupported("vector(1536)")?
+  embedding     Unsupported("vector(1024)")?
   tutor         TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
   healthRecords HealthRecord[]
   bookings      Booking[]

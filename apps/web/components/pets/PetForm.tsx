@@ -55,7 +55,8 @@ export function PetForm({ pet, onSuccess }: PetFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
 
   const form = useForm<PetFormValues>({
-    resolver: zodResolver(petSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(petSchema as any),
     defaultValues: {
       name: pet?.name ?? '',
       species: pet?.species ?? 'DOG',

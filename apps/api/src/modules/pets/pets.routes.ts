@@ -15,6 +15,7 @@ import {
   deleteHealthRecord,
   getUpcomingHealthReminders,
 } from './pets.service.js'
+import { getEmbeddingQueue } from '../ai/workers.js'
 
 type PhotoFile = { buffer: Buffer; contentType: string; filename: string }
 
@@ -50,6 +51,10 @@ export async function petsRoutes(fastify: FastifyInstance) {
     }
 
     const pet = await createPet(req.user.sub, parsed.data, photoFile)
+    // Enqueue embedding generation (non-blocking)
+    getEmbeddingQueue()
+      .add('generate-pet-embedding', { petId: pet.id })
+      .catch(() => {})
     return reply.status(201).send({ pet })
   })
 
@@ -82,6 +87,10 @@ export async function petsRoutes(fastify: FastifyInstance) {
     }
 
     const pet = await updatePet(id, req.user.sub, parsed.data, photoFile)
+    // Re-generate embedding if profile changed
+    getEmbeddingQueue()
+      .add('generate-pet-embedding', { petId: id })
+      .catch(() => {})
     return reply.send({ pet })
   })
 

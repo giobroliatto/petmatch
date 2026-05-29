@@ -31,7 +31,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   const form = useForm<ResetValues>({
-    resolver: zodResolver(resetSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(resetSchema as any),
     defaultValues: { newPassword: '', confirmPassword: '' },
   })
 

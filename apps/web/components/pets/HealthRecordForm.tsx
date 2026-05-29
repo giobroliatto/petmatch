@@ -35,7 +35,8 @@ export function HealthRecordForm({ petId, onSuccess }: HealthRecordFormProps) {
   const createRecord = useCreateHealthRecord(petId)
 
   const form = useForm<HealthFormValues>({
-    resolver: zodResolver(healthSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(healthSchema as any),
     defaultValues: { title: '', description: '', date: '', nextDueDate: '' },
   })
 

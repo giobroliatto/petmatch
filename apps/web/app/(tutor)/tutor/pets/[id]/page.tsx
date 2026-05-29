@@ -101,7 +101,7 @@ export default function PetDetailPage() {
     return (
       <div className="container max-w-2xl mx-auto p-6 text-center">
         <p className="text-muted-foreground">Pet não encontrado.</p>
-        <Link href="/pets">
+        <Link href="/tutor/pets">
           <Button variant="link">Voltar</Button>
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function PetDetailPage() {
     try {
       await deletePet.mutateAsync(pet!.id)
       toast.success('Pet excluído')
-      router.push('/pets')
+      router.push('/tutor/pets')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao excluir pet')
     }
@@ -126,7 +126,7 @@ export default function PetDetailPage() {
   return (
     <div className="container max-w-2xl mx-auto p-6 space-y-6">
       {/* Voltar */}
-      <Link href="/pets" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/tutor/pets" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Meus pets
       </Link>

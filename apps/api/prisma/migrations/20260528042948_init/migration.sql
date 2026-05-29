@@ -82,7 +82,7 @@ CREATE TABLE "ProviderProfile" (
     "radiusKm" DOUBLE PRECISION NOT NULL DEFAULT 10,
     "serviceTypes" "ServiceType"[],
     "galleryUrls" TEXT[],
-    "embedding" vector(1536),
+    "embedding" vector(1024),
     "averageRating" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalReviews" INTEGER NOT NULL DEFAULT 0,
     "qualityTags" TEXT[],
@@ -128,7 +128,7 @@ CREATE TABLE "Pet" (
     "neutered" BOOLEAN NOT NULL DEFAULT false,
     "photoUrl" TEXT,
     "notes" TEXT,
-    "embedding" vector(1536),
+    "embedding" vector(1024),
 
     CONSTRAINT "Pet_pkey" PRIMARY KEY ("id")
 );

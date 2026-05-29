@@ -27,7 +27,7 @@ function PetCard({ pet }: { pet: Pet }) {
   })
 
   return (
-    <Link href={`/pets/${pet.id}`}>
+    <Link href={`/tutor/pets/${pet.id}`}>
       <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
         <CardContent className="p-4 flex flex-col items-center gap-3 text-center">
           <div className="relative h-20 w-20 rounded-full overflow-hidden border bg-muted flex items-center justify-center">

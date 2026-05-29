@@ -15,11 +15,13 @@ export default auth((req) => {
   const roles: string[] = session.user?.roles ?? []
 
   if (pathname.startsWith('/tutor') && !roles.includes('TUTOR')) {
-    return NextResponse.redirect(new URL('/login', req.url))
+    const dest = roles.includes('PROVIDER') ? '/provider/dashboard' : '/login'
+    return NextResponse.redirect(new URL(dest, req.url))
   }
 
   if (pathname.startsWith('/provider') && !roles.includes('PROVIDER')) {
-    return NextResponse.redirect(new URL('/login', req.url))
+    const dest = roles.includes('TUTOR') ? '/tutor/dashboard' : '/login'
+    return NextResponse.redirect(new URL(dest, req.url))
   }
 
   if (pathname.startsWith('/admin') && !roles.includes('ADMIN')) {
@@ -30,5 +32,13 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/tutor/:path*', '/provider/:path*', '/admin/:path*'],
+  matcher: [
+    '/tutor/:path*',
+    // Provider protected area (dashboard, services) — NOT /provider/[id] which is a public profile
+    '/provider/dashboard',
+    '/provider/dashboard/:path*',
+    '/provider/services',
+    '/provider/services/:path*',
+    '/admin/:path*',
+  ],
 }

@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -22,11 +22,13 @@ type LoginValues = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/tutor/dashboard'
+  // callbackUrl only used if explicitly set by the middleware (user was trying to access a specific page)
+  const explicitCallbackUrl = searchParams.get('callbackUrl')
   const [loading, setLoading] = useState(false)
 
   const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(loginSchema as any),
     defaultValues: { email: '', password: '' },
   })
 
@@ -44,13 +46,29 @@ export default function LoginPage() {
       return
     }
 
-    // Redirect based on role — next-auth session callback handles enrichment
-    router.push(callbackUrl)
+    // If redirected here by middleware (e.g. tried to access a protected page), honor it
+    if (explicitCallbackUrl) {
+      router.push(explicitCallbackUrl)
+      router.refresh()
+      return
+    }
+
+    // Otherwise detect role from the fresh session and go to the right dashboard
+    const session = await getSession()
+    const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
+
+    if (roles.includes('PROVIDER')) {
+      router.push('/provider/dashboard')
+    } else if (roles.includes('ADMIN')) {
+      router.push('/admin')
+    } else {
+      router.push('/tutor/dashboard')
+    }
     router.refresh()
   }
 
   async function handleGoogleSignIn() {
-    await signIn('google', { callbackUrl })
+    await signIn('google', { callbackUrl: explicitCallbackUrl ?? '/tutor/dashboard' })
   }
 
   return (

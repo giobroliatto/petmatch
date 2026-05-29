@@ -22,7 +22,8 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
 
   const form = useForm<ForgotValues>({
-    resolver: zodResolver(forgotSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(forgotSchema as any),
     defaultValues: { email: '' },
   })
 
