@@ -3,7 +3,9 @@
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Star, MapPin, CheckCircle, ChevronRight, Package, Pencil } from 'lucide-react'
+import { format, isToday } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Star, MapPin, CheckCircle, ChevronRight, Package, Pencil, Calendar, Sparkles, Clock } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useMyProviderProfile, useUpdateProviderProfile } from '@/lib/hooks/useProviders'
+import { useBookings, useConfirmBooking, useRejectBooking } from '@/lib/hooks/useBookings'
 import { formatPrice, SERVICE_TYPE_LABELS, DAYS_OF_WEEK, type ServiceType } from '@/lib/providers'
 
 const SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string }[] = [
@@ -56,7 +59,16 @@ export default function ProviderDashboardPage() {
   const { data: session } = useSession()
   const { data: profile, isLoading, error } = useMyProviderProfile()
   const updateProfile = useUpdateProviderProfile()
+  const { data: pendingBookings = [] } = useBookings('PENDING')
+  const { data: confirmedBookings = [] } = useBookings('CONFIRMED')
+  const confirmBooking = useConfirmBooking()
+  const rejectBooking = useRejectBooking()
   const [editOpen, setEditOpen] = useState(false)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+
+  const todayBookings = confirmedBookings.filter((b) =>
+    isToday(new Date(b.scheduledAt)),
+  )
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema as any),
@@ -161,6 +173,131 @@ export default function ProviderDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending booking requests */}
+      {pendingBookings.length > 0 && (
+        <Card className="mb-6 border-yellow-200 dark:border-yellow-900/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-yellow-600" />
+              Solicitações pendentes ({pendingBookings.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {pendingBookings.map((booking) => (
+                <div key={booking.id} className="py-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{booking.service.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Tutor: {booking.tutor.user.name} · Pet: {booking.pet.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(booking.scheduledAt), "dd/MM/yyyy 'às' HH:mm", {
+                          locale: ptBR,
+                        })}
+                        {' · '}
+                        <span className="font-medium">{formatPrice(booking.totalPrice)}</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await confirmBooking.mutateAsync(booking.id)
+                            toast.success('Reserva confirmada!')
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Erro')
+                          }
+                        }}
+                        disabled={confirmBooking.isPending && rejectingId !== booking.id}
+                      >
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        onClick={async () => {
+                          setRejectingId(booking.id)
+                          try {
+                            await rejectBooking.mutateAsync({ id: booking.id })
+                            toast.success('Reserva recusada.')
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Erro')
+                          } finally {
+                            setRejectingId(null)
+                          }
+                        }}
+                        disabled={rejectingId === booking.id && rejectBooking.isPending}
+                      >
+                        Recusar
+                      </Button>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/provider/bookings/${booking.id}`}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                  {booking.briefing && (
+                    <div className="bg-primary/5 rounded-md px-3 py-2 border border-primary/20">
+                      <p className="text-xs font-medium flex items-center gap-1 mb-1">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                        Briefing IA
+                      </p>
+                      <p className="text-xs text-muted-foreground line-clamp-3">
+                        {booking.briefing}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Today's schedule */}
+      {todayBookings.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Agenda de hoje ({todayBookings.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {todayBookings
+                .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+                .map((booking) => (
+                  <div key={booking.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{booking.service.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {booking.tutor.user.name} · {booking.pet.name}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {format(new Date(booking.scheduledAt), 'HH:mm', { locale: ptBR })}
+                      </span>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/provider/bookings/${booking.id}`}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-3 gap-6">
         {/* Left column */}

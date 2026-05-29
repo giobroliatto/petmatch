@@ -39,6 +39,8 @@ export const config = {
     '/provider/dashboard/:path*',
     '/provider/setup',
     '/provider/setup/:path*',
+    '/provider/bookings',
+    '/provider/bookings/:path*',
     '/admin/:path*',
   ],
 }

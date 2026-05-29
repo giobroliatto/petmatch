@@ -107,7 +107,7 @@ export async function sendReviewRequestEmail(
   details: BookingEmailDetails,
 ): Promise<void> {
   const { resend, from } = getClient()
-  const reviewUrl = `${APP_URL}/tutor/dashboard`
+  const reviewUrl = `${APP_URL}/tutor/bookings`
   await resend.emails.send({
     from,
     to,
@@ -116,6 +116,77 @@ export async function sendReviewRequestEmail(
       <h1>Como foi a experiência? ⭐</h1>
       <p>Olá, ${details.tutorName}! O serviço de ${details.serviceName} foi concluído.</p>
       <p>Avalie ${details.providerName}: <a href="${reviewUrl}">Deixar avaliação</a></p>
+    `,
+  })
+}
+
+export async function sendNewBookingRequestEmail(
+  to: string,
+  details: BookingEmailDetails & { briefing?: string },
+): Promise<void> {
+  const { resend, from } = getClient()
+  const dashUrl = `${APP_URL}/provider/dashboard`
+  await resend.emails.send({
+    from,
+    to,
+    subject: `Nova solicitação de reserva — ${details.petName}`,
+    html: `
+      <h1>Nova solicitação de reserva! 🐾</h1>
+      <p>Olá, ${details.providerName}! Você recebeu uma nova solicitação.</p>
+      <ul>
+        <li><strong>Pet:</strong> ${details.petName}</li>
+        <li><strong>Serviço:</strong> ${details.serviceName}</li>
+        <li><strong>Tutor:</strong> ${details.tutorName}</li>
+        <li><strong>Data:</strong> ${details.scheduledAt.toLocaleString('pt-BR')}</li>
+        <li><strong>Total:</strong> R$ ${details.totalPrice.toFixed(2)}</li>
+      </ul>
+      ${details.briefing ? `<p><strong>Briefing IA:</strong> ${details.briefing}</p>` : ''}
+      <p><a href="${dashUrl}">Confirmar ou recusar</a></p>
+    `,
+  })
+}
+
+export async function sendBookingRejectedEmail(
+  to: string,
+  details: BookingEmailDetails & { rejectionReason?: string },
+): Promise<void> {
+  const { resend, from } = getClient()
+  await resend.emails.send({
+    from,
+    to,
+    subject: `Solicitação não aceita — ${details.serviceName}`,
+    html: `
+      <h1>Solicitação não aceita</h1>
+      <p>Olá, ${details.tutorName}! Infelizmente sua solicitação não foi aceita.</p>
+      <ul>
+        <li><strong>Serviço:</strong> ${details.serviceName}</li>
+        <li><strong>Prestador:</strong> ${details.providerName}</li>
+        <li><strong>Pet:</strong> ${details.petName}</li>
+        <li><strong>Data:</strong> ${details.scheduledAt.toLocaleString('pt-BR')}</li>
+      </ul>
+      ${details.rejectionReason ? `<p><strong>Motivo:</strong> ${details.rejectionReason}</p>` : ''}
+    `,
+  })
+}
+
+export async function sendMessageNotificationEmail(
+  to: string,
+  recipientName: string,
+  senderName: string,
+  preview: string,
+): Promise<void> {
+  const { resend, from } = getClient()
+  const msgUrl = `${APP_URL}/tutor/bookings`
+  const safePreview = preview.substring(0, 150) + (preview.length > 150 ? '...' : '')
+  await resend.emails.send({
+    from,
+    to,
+    subject: `Nova mensagem de ${senderName} — PetMatch`,
+    html: `
+      <h1>Nova mensagem! 💬</h1>
+      <p>Olá, ${recipientName}! Você recebeu uma mensagem de ${senderName}.</p>
+      <blockquote>${safePreview}</blockquote>
+      <p><a href="${msgUrl}">Ver mensagem</a></p>
     `,
   })
 }

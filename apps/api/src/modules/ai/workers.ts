@@ -1,6 +1,14 @@
 import { Queue, Worker } from 'bullmq'
 import { generatePetEmbedding, generateProviderEmbedding } from './embeddings.service.js'
 import { analyzeProviderReviews } from './reviews.service.js'
+import { prisma } from '../../lib/prisma.js'
+import {
+  sendNewBookingRequestEmail,
+  sendBookingConfirmationEmail,
+  sendBookingRejectedEmail,
+  sendReviewRequestEmail,
+  sendMessageNotificationEmail,
+} from '../../lib/email.js'
 
 function getRedisConnectionOptions() {
   const url = process.env.REDIS_URL
@@ -18,6 +26,7 @@ function getRedisConnectionOptions() {
 // Singleton queues (one connection each)
 let _embeddingQueue: Queue | null = null
 let _reviewsQueue: Queue | null = null
+let _emailQueue: Queue | null = null
 
 export function getEmbeddingQueue(): Queue {
   if (!_embeddingQueue) {
@@ -31,6 +40,13 @@ export function getReviewsQueue(): Queue {
     _reviewsQueue = new Queue('reviews', { connection: getRedisConnectionOptions() })
   }
   return _reviewsQueue
+}
+
+export function getEmailQueue(): Queue {
+  if (!_emailQueue) {
+    _emailQueue = new Queue('emails', { connection: getRedisConnectionOptions() })
+  }
+  return _emailQueue
 }
 
 export function startWorkers(): void {
@@ -66,5 +82,130 @@ export function startWorkers(): void {
     { connection: getRedisConnectionOptions() },
   )
 
-  console.log('[BullMQ] Workers started (embeddings, reviews)')
+  new Worker(
+    'emails',
+    async job => {
+      try {
+        // Guard: skip if key is a placeholder
+        const apiKey = process.env.RESEND_API_KEY ?? ''
+        if (!apiKey || apiKey.includes('qualquer')) {
+          console.log(`[BullMQ][Email] Stub (key not configured) — job "${job.name}"`)
+          return
+        }
+
+        if (job.name === 'new-booking-request') {
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              service: true,
+              pet: true,
+              tutor: { include: { user: true } },
+              provider: { include: { user: true } },
+            },
+          })
+          if (!booking) return
+          await sendNewBookingRequestEmail(booking.provider.user.email, {
+            bookingId: booking.id,
+            serviceName: booking.service.name,
+            providerName: booking.provider.user.name ?? '',
+            tutorName: booking.tutor.user.name ?? '',
+            petName: booking.pet.name,
+            scheduledAt: booking.scheduledAt,
+            totalPrice: booking.totalPrice,
+            briefing: booking.briefing ?? undefined,
+          })
+        } else if (job.name === 'booking-confirmed') {
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              service: true,
+              pet: true,
+              tutor: { include: { user: true } },
+              provider: { include: { user: true } },
+            },
+          })
+          if (!booking) return
+          await sendBookingConfirmationEmail(booking.tutor.user.email, {
+            bookingId: booking.id,
+            serviceName: booking.service.name,
+            providerName: booking.provider.user.name ?? '',
+            tutorName: booking.tutor.user.name ?? '',
+            petName: booking.pet.name,
+            scheduledAt: booking.scheduledAt,
+            totalPrice: booking.totalPrice,
+          })
+        } else if (job.name === 'booking-rejected') {
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              service: true,
+              pet: true,
+              tutor: { include: { user: true } },
+              provider: { include: { user: true } },
+            },
+          })
+          if (!booking) return
+          await sendBookingRejectedEmail(booking.tutor.user.email, {
+            bookingId: booking.id,
+            serviceName: booking.service.name,
+            providerName: booking.provider.user.name ?? '',
+            tutorName: booking.tutor.user.name ?? '',
+            petName: booking.pet.name,
+            scheduledAt: booking.scheduledAt,
+            totalPrice: booking.totalPrice,
+            rejectionReason: job.data.rejectionReason as string | undefined,
+          })
+        } else if (job.name === 'review-request') {
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              service: true,
+              pet: true,
+              tutor: { include: { user: true } },
+              provider: { include: { user: true } },
+            },
+          })
+          if (!booking) return
+          await sendReviewRequestEmail(booking.tutor.user.email, {
+            bookingId: booking.id,
+            serviceName: booking.service.name,
+            providerName: booking.provider.user.name ?? '',
+            tutorName: booking.tutor.user.name ?? '',
+            petName: booking.pet.name,
+            scheduledAt: booking.scheduledAt,
+            totalPrice: booking.totalPrice,
+          })
+        } else if (job.name === 'message-notification') {
+          const recipient = await prisma.user.findUnique({
+            where: { id: job.data.recipientId as string },
+          })
+          if (!recipient) return
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              tutor: { include: { user: { select: { name: true } } } },
+              provider: { include: { user: { select: { name: true } } } },
+            },
+          })
+          if (!booking) return
+          const isTutor = booking.tutor.userId === recipient.id
+          const senderName = isTutor
+            ? (booking.provider.user.name ?? 'Prestador')
+            : (booking.tutor.user.name ?? 'Tutor')
+          await sendMessageNotificationEmail(
+            recipient.email,
+            recipient.name ?? '',
+            senderName,
+            job.data.preview as string,
+          )
+        }
+      } catch (err) {
+        // Email failures are non-fatal — log but don't rethrow
+        console.error(`[BullMQ] Email job "${job.name}" failed:`, err)
+      }
+    },
+    { connection: getRedisConnectionOptions() },
+  )
+
+  console.log('[BullMQ] Workers started (embeddings, reviews, emails)')
 }
