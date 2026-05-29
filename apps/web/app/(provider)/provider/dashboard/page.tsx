@@ -118,13 +118,13 @@ export default function ProviderDashboardPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-1" /> Editar perfil
+            <Pencil className="h-4 w-4 mr-1" /> Editar bio
           </Button>
           <Button variant="outline" asChild>
             <Link href={`/provider/${profile.id}`}>Ver perfil público</Link>
           </Button>
           <Button asChild>
-            <Link href="/provider/services">Gerenciar serviços</Link>
+            <Link href="/provider/setup">Gerenciar serviços</Link>
           </Button>
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function ProviderDashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base">Serviços ativos</CardTitle>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/provider/services">
+                <Link href="/provider/setup">
                   Gerenciar <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
@@ -269,7 +269,7 @@ export default function ProviderDashboardPage() {
                 <div className="text-center py-6 text-sm text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   Nenhum serviço ativo.{' '}
-                  <Link href="/provider/services" className="underline">
+                  <Link href="/provider/setup" className="underline">
                     Adicione um agora.
                   </Link>
                 </div>

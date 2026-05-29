@@ -4,6 +4,8 @@ import authPlugin from './plugins/auth.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { petsRoutes } from './modules/pets/pets.routes.js'
 import { providersRoutes } from './modules/providers/providers.routes.js'
+import { servicesRoutes } from './modules/services/services.routes.js'
+import { availabilityRoutes } from './modules/availability/availability.routes.js'
 import { startWorkers } from './modules/ai/workers.js'
 
 declare module 'fastify' {
@@ -27,6 +29,8 @@ const start = async () => {
     await app.register(authRoutes)
     await app.register(petsRoutes)
     await app.register(providersRoutes)
+    await app.register(servicesRoutes)
+    await app.register(availabilityRoutes)
 
     startWorkers()
 

@@ -22,7 +22,7 @@ import { SERVICE_TYPE_LABELS, type ProviderCardData, type SearchFilters } from '
 type Mode = 'ai' | 'filter'
 
 const RATING_OPTIONS = [
-  { label: 'Qualquer avaliação', value: '' },
+  { label: 'Qualquer avaliação', value: 'all' },
   { label: '4+ estrelas', value: '4' },
   { label: '4.5+ estrelas', value: '4.5' },
   { label: '5 estrelas', value: '5' },
@@ -174,17 +174,17 @@ export default function SearchPage() {
               <div className="space-y-2">
                 <Label>Tipo de serviço</Label>
                 <Select
-                  value={filters.serviceType ?? ''}
+                  value={filters.serviceType ?? 'all'}
                   onValueChange={v => {
                     setFilterEnabled(false)
-                    setFilters(f => ({ ...f, serviceType: v || undefined }))
+                    setFilters(f => ({ ...f, serviceType: v === 'all' ? undefined : v }))
                   }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os serviços" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os serviços</SelectItem>
+                    <SelectItem value="all">Todos os serviços</SelectItem>
                     {Object.entries(SERVICE_TYPE_LABELS).map(([key, label]) => (
                       <SelectItem key={key} value={key}>
                         {label}
@@ -197,10 +197,10 @@ export default function SearchPage() {
               <div className="space-y-2">
                 <Label>Avaliação mínima</Label>
                 <Select
-                  value={filters.minRating !== undefined ? String(filters.minRating) : ''}
+                  value={filters.minRating !== undefined ? String(filters.minRating) : 'all'}
                   onValueChange={v => {
                     setFilterEnabled(false)
-                    setFilters(f => ({ ...f, minRating: v ? Number(v) : undefined }))
+                    setFilters(f => ({ ...f, minRating: v === 'all' ? undefined : Number(v) }))
                   }}
                 >
                   <SelectTrigger>

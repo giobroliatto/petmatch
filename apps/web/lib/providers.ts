@@ -63,6 +63,7 @@ export interface ProviderCardData {
 export interface ProviderFullProfile extends ProviderCardData {
   bio?: string | null
   state?: string | null
+  phone?: string | null
   galleryUrls: string[]
   radiusKm: number
   services: ProviderService[]

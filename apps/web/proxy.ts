@@ -34,11 +34,11 @@ export default auth((req) => {
 export const config = {
   matcher: [
     '/tutor/:path*',
-    // Provider protected area (dashboard, services) — NOT /provider/[id] which is a public profile
+    // Provider protected area — NOT /provider/[id] which is a public profile
     '/provider/dashboard',
     '/provider/dashboard/:path*',
-    '/provider/services',
-    '/provider/services/:path*',
+    '/provider/setup',
+    '/provider/setup/:path*',
     '/admin/:path*',
   ],
 }

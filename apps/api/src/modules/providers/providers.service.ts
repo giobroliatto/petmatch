@@ -18,7 +18,7 @@ export async function searchProviders(filters: SearchProvidersQuery) {
     where.services = { some: serviceFilter }
   }
 
-  const [providers, total] = await prisma.$transaction([
+  const [rows, total] = await prisma.$transaction([
     prisma.providerProfile.findMany({
       where,
       include: {
@@ -32,11 +32,12 @@ export async function searchProviders(filters: SearchProvidersQuery) {
     prisma.providerProfile.count({ where }),
   ])
 
+  const providers = rows.map(p => ({ ...p, name: p.user.name, avatarUrl: p.user.avatarUrl ?? null }))
   return { providers, total, page }
 }
 
 export async function getProviderProfile(providerId: string) {
-  return prisma.providerProfile.findUnique({
+  const data = await prisma.providerProfile.findUnique({
     where: { id: providerId },
     include: {
       user: { select: { name: true, avatarUrl: true, phone: true } },
@@ -57,6 +58,8 @@ export async function getProviderProfile(providerId: string) {
       },
     },
   })
+  if (!data) return null
+  return { ...data, name: data.user.name, avatarUrl: data.user.avatarUrl ?? null, phone: data.user.phone ?? null }
 }
 
 export async function getMyProviderProfile(userId: string) {
