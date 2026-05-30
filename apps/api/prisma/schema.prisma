@@ -51,6 +51,7 @@ model User {
   avatarUrl     String?
   roles         UserRole[]
   emailVerified DateTime?
+  suspended     Boolean    @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -112,6 +113,8 @@ model ProviderProfile {
   radiusKm      Float       @default(10)
   serviceTypes  ServiceType[]
   galleryUrls   String[]
+  verificationDocumentUrl  String?
+  verificationSubmittedAt  DateTime?
   embedding     Unsupported("vector(1024)")?
   averageRating Float       @default(0)
   totalReviews  Int         @default(0)

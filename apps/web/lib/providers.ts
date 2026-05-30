@@ -125,3 +125,46 @@ export interface UpdateProviderProfileInput {
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
+export async function uploadGalleryPhoto(token: string, file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${API_URL}/providers/me/gallery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string }
+    throw new Error(data.error ?? 'Erro ao fazer upload')
+  }
+  return ((await res.json()) as { url: string }).url
+}
+
+export async function deleteGalleryPhoto(token: string, photoUrl: string): Promise<void> {
+  const res = await fetch(`${API_URL}/providers/me/gallery`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ photoUrl }),
+  })
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string }
+    throw new Error(data.error ?? 'Erro ao deletar foto')
+  }
+}
+
+export async function submitVerificationDoc(token: string, file: File): Promise<void> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${API_URL}/providers/me/verification`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string }
+    throw new Error(data.error ?? 'Erro ao enviar documento')
+  }
+}

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
+import { uploadFile, deleteFile } from '../../lib/r2.js'
 import type { SearchProvidersQuery, UpdateProviderProfileBody } from './providers.schema.js'
 
 export async function searchProviders(filters: SearchProvidersQuery) {
@@ -114,5 +115,55 @@ export async function listFeaturedProviders(city: string) {
     },
     orderBy: { averageRating: 'desc' },
     take: 10,
+  })
+}
+
+// ─── Gallery ──────────────────────────────────────────────────────────────────
+
+export async function uploadGalleryPhoto(userId: string, buffer: Buffer, mimeType: string): Promise<string> {
+  const provider = await prisma.providerProfile.findUnique({ where: { userId }, select: { id: true, galleryUrls: true } })
+  if (!provider) throw new Error('Perfil de prestador não encontrado')
+  if (provider.galleryUrls.length >= 10) throw new Error('Limite de 10 fotos atingido')
+
+  const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'
+  const key = `gallery/${provider.id}/${Date.now()}.${ext}`
+  const url = await uploadFile(key, buffer, mimeType)
+
+  await prisma.providerProfile.update({
+    where: { id: provider.id },
+    data: { galleryUrls: { push: url } },
+  })
+  return url
+}
+
+export async function deleteGalleryPhoto(userId: string, photoUrl: string): Promise<void> {
+  const provider = await prisma.providerProfile.findUnique({ where: { userId }, select: { id: true, galleryUrls: true } })
+  if (!provider) throw new Error('Perfil de prestador não encontrado')
+  if (!provider.galleryUrls.includes(photoUrl)) throw new Error('Foto não encontrada')
+
+  // Extract R2 key from URL
+  const publicUrl = process.env.R2_PUBLIC_URL ?? ''
+  const key = photoUrl.replace(`${publicUrl}/`, '')
+  await deleteFile(key)
+
+  await prisma.providerProfile.update({
+    where: { id: provider.id },
+    data: { galleryUrls: provider.galleryUrls.filter(u => u !== photoUrl) },
+  })
+}
+
+// ─── Verification ─────────────────────────────────────────────────────────────
+
+export async function submitVerification(userId: string, buffer: Buffer, mimeType: string): Promise<void> {
+  const provider = await prisma.providerProfile.findUnique({ where: { userId }, select: { id: true } })
+  if (!provider) throw new Error('Perfil de prestador não encontrado')
+
+  const ext = mimeType === 'image/png' ? 'png' : mimeType === 'application/pdf' ? 'pdf' : 'jpg'
+  const key = `verifications/${provider.id}/${Date.now()}.${ext}`
+  const url = await uploadFile(key, buffer, mimeType)
+
+  await prisma.providerProfile.update({
+    where: { id: provider.id },
+    data: { verificationDocumentUrl: url, verificationSubmittedAt: new Date() },
   })
 }

@@ -9,6 +9,7 @@ import { availabilityRoutes } from './modules/availability/availability.routes.j
 import { bookingsRoutes } from './modules/bookings/bookings.routes.js'
 import { messagesRoutes } from './modules/messages/messages.routes.js'
 import { reviewsRoutes } from './modules/reviews/reviews.routes.js'
+import { adminRoutes } from './modules/admin/admin.routes.js'
 import { startWorkers } from './modules/ai/workers.js'
 
 declare module 'fastify' {
@@ -37,6 +38,7 @@ const start = async () => {
     await app.register(bookingsRoutes)
     await app.register(messagesRoutes)
     await app.register(reviewsRoutes)
+    await app.register(adminRoutes)
 
     startWorkers()
 

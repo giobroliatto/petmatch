@@ -32,6 +32,14 @@ function getProviderLinks(): NavLink[] {
   ]
 }
 
+function getAdminLinks(): NavLink[] {
+  return [
+    { href: '/admin', label: 'Dashboard' },
+    { href: '/admin/verifications', label: 'Verificações' },
+    { href: '/admin/users', label: 'Usuários' },
+  ]
+}
+
 function getPublicLinks(): NavLink[] {
   return [
     { href: '/search', label: 'Buscar' },
@@ -72,13 +80,13 @@ export function Header() {
   const isAdmin = roles.includes('ADMIN')
   const isAuthenticated = status === 'authenticated'
 
-  const navLinks = isProvider
-    ? getProviderLinks()
-    : isTutor || isAdmin
-      ? getTutorLinks()
-      : getPublicLinks()
-
-  const adminLink: NavLink = { href: '/admin', label: 'Admin' }
+  const navLinks = isAdmin
+    ? getAdminLinks()
+    : isProvider
+      ? getProviderLinks()
+      : isTutor
+        ? getTutorLinks()
+        : getPublicLinks()
 
   async function handleLogout() {
     setMobileOpen(false)
@@ -97,14 +105,6 @@ export function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
           <NavLinks links={navLinks} />
-          {isAdmin && (
-            <Link
-              href={adminLink.href}
-              className="text-sm font-medium text-muted-foreground hover:text-primary"
-            >
-              {adminLink.label}
-            </Link>
-          )}
         </nav>
 
         {/* Desktop auth */}

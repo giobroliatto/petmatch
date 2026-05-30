@@ -190,3 +190,60 @@ export async function sendMessageNotificationEmail(
     `,
   })
 }
+
+export async function sendProviderVerifiedEmail(to: string, name: string): Promise<void> {
+  try {
+    const { resend, from } = getClient()
+    await resend.emails.send({
+      from,
+      to,
+      subject: 'Sua conta foi verificada — PetMatch',
+      html: `
+        <h1>Parabéns, ${name}! ✅</h1>
+        <p>Sua conta foi verificada. Você agora aparece como prestador verificado nas buscas.</p>
+        <p><a href="${APP_URL}/provider/dashboard">Acessar painel</a></p>
+      `,
+    })
+  } catch {
+    console.warn('sendProviderVerifiedEmail: email not sent (missing credentials)')
+  }
+}
+
+export async function sendProviderRejectedEmail(to: string, name: string, reason: string): Promise<void> {
+  try {
+    const { resend, from } = getClient()
+    await resend.emails.send({
+      from,
+      to,
+      subject: 'Verificação não aprovada — PetMatch',
+      html: `
+        <h1>Verificação não aprovada</h1>
+        <p>Olá, ${name}. Infelizmente sua verificação não foi aprovada.</p>
+        <p><strong>Motivo:</strong> ${reason}</p>
+        <p>Você pode enviar um novo documento acessando seu perfil.</p>
+        <p><a href="${APP_URL}/provider/setup">Reenviar documento</a></p>
+      `,
+    })
+  } catch {
+    console.warn('sendProviderRejectedEmail: email not sent (missing credentials)')
+  }
+}
+
+export async function sendUserSuspendedEmail(to: string, name: string, reason: string): Promise<void> {
+  try {
+    const { resend, from } = getClient()
+    await resend.emails.send({
+      from,
+      to,
+      subject: 'Conta suspensa — PetMatch',
+      html: `
+        <h1>Conta suspensa</h1>
+        <p>Olá, ${name}. Sua conta foi suspensa.</p>
+        <p><strong>Motivo:</strong> ${reason}</p>
+        <p>Entre em contato com o suporte se acreditar que isso foi um engano.</p>
+      `,
+    })
+  } catch {
+    console.warn('sendUserSuspendedEmail: email not sent (missing credentials)')
+  }
+}

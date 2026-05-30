@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, CheckCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, CheckCircle, Upload, X, ShieldCheck, Clock, FileCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +31,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useMyProviderProfile, useUpdateProviderProfile } from '@/lib/hooks/useProviders'
 import { useCreateService, useUpdateService, useDeleteService, type ServiceInput } from '@/lib/hooks/useServices'
 import { useSetAvailability, type AvailabilitySlot } from '@/lib/hooks/useAvailability'
-import { formatPrice, type ServiceType } from '@/lib/providers'
+import { formatPrice, type ServiceType, uploadGalleryPhoto, deleteGalleryPhoto, submitVerificationDoc } from '@/lib/providers'
+import { useSession } from 'next-auth/react'
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -549,6 +550,198 @@ function AvailabilitySection() {
   )
 }
 
+// ─── section: gallery ────────────────────────────────────────────────────────
+
+function GallerySection() {
+  const { data: profile, refetch } = useMyProviderProfile()
+  const { data: session } = useSession()
+  const [uploading, setUploading] = useState(false)
+  const [deletingUrl, setDeletingUrl] = useState<string | null>(null)
+  const token = session?.user?.accessToken ?? ''
+
+  const photos = profile?.galleryUrls ?? []
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) {
+      toast.error('Use JPG, PNG ou WebP')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo 5MB')
+      return
+    }
+    setUploading(true)
+    try {
+      await uploadGalleryPhoto(token, file)
+      await refetch()
+      toast.success('Foto adicionada!')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao fazer upload')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleDelete(url: string) {
+    setDeletingUrl(url)
+    try {
+      await deleteGalleryPhoto(token, url)
+      await refetch()
+      toast.success('Foto removida')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao remover foto')
+    } finally {
+      setDeletingUrl(null)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">4</span>
+          Galeria de fotos
+        </CardTitle>
+        <CardDescription>
+          Adicione fotos do seu espaço ou atendimentos. Máximo de 10 fotos.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Upload zone */}
+        {photos.length < 10 && (
+          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary transition-colors">
+            <Upload className="h-8 w-8 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {uploading ? 'Enviando...' : 'Clique para adicionar foto (JPG, PNG, WebP — máx 5MB)'}
+            </span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              disabled={uploading}
+              onChange={handleFileChange}
+            />
+          </label>
+        )}
+
+        {/* Photo grid */}
+        {photos.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {photos.map((url) => (
+              <div key={url} className="relative group rounded-lg overflow-hidden aspect-square">
+                <img src={url} alt="Galeria" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleDelete(url)}
+                  disabled={deletingUrl === url}
+                  className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">{photos.length}/10 fotos</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── section: verification ───────────────────────────────────────────────────
+
+function VerificationSection() {
+  const { data: profile, refetch } = useMyProviderProfile()
+  const { data: session } = useSession()
+  const [uploading, setUploading] = useState(false)
+  const token = session?.user?.accessToken ?? ''
+
+  const isPending = !!(profile?.verificationDocumentUrl && !profile.verified)
+  const isVerified = profile?.verified
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowed.includes(file.type)) {
+      toast.error('Use JPG, PNG, WebP ou PDF')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo 5MB')
+      return
+    }
+    setUploading(true)
+    try {
+      await submitVerificationDoc(token, file)
+      await refetch()
+      toast.success('Documento enviado! Analisaremos em breve.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao enviar documento')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">5</span>
+          Verificação de identidade
+        </CardTitle>
+        <CardDescription>
+          Prestadores verificados aparecem com selo de confiança e têm destaque nas buscas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isVerified ? (
+          <div className="flex items-center gap-3 text-green-700 bg-green-50 border border-green-200 rounded-lg p-4">
+            <ShieldCheck className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-medium">Perfil verificado</p>
+              <p className="text-sm">Você possui o selo de prestador verificado.</p>
+            </div>
+          </div>
+        ) : isPending ? (
+          <div className="flex items-center gap-3 text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <Clock className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-medium">Em análise</p>
+              <p className="text-sm">Documento enviado. A revisão leva até 2 dias úteis.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>Envie um documento com foto (RG, CNH) ou diploma/certificado profissional.</p>
+              <p>Formatos aceitos: JPG, PNG, WebP, PDF — máx 5MB.</p>
+            </div>
+            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary transition-colors max-w-sm">
+              <FileCheck className="h-8 w-8 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {uploading ? 'Enviando...' : 'Clique para enviar documento'}
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                disabled={uploading}
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function ProviderSetupPage() {
@@ -585,6 +778,10 @@ export default function ProviderSetupPage() {
         <ServicesSection />
         <Separator />
         <AvailabilitySection />
+        <Separator />
+        <GallerySection />
+        <Separator />
+        <VerificationSection />
       </div>
     </div>
   )
