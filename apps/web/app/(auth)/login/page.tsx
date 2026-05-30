@@ -17,15 +17,27 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Senha é obrigatória'),
 })
 
+import { useEffect } from 'react'
+
 type LoginValues = z.infer<typeof loginSchema>
+
+/** Only allow relative paths to prevent open redirect */
+function isSafeUrl(url: string | null): url is string {
+  return !!url && url.startsWith('/') && !url.startsWith('//')
+}
 
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // callbackUrl only used if explicitly set by the middleware (user was trying to access a specific page)
-  const explicitCallbackUrl = searchParams.get('callbackUrl')
+  const rawCallback = searchParams.get('callbackUrl')
+  const explicitCallbackUrl = isSafeUrl(rawCallback) ? rawCallback : null
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (searchParams.get('denied')) {
+      toast.error('Você não tem permissão para acessar essa página.')
+    }
+  }, [])
   const form = useForm<LoginValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(loginSchema as any),

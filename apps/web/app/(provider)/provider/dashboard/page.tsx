@@ -35,6 +35,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useMyProviderProfile, useUpdateProviderProfile } from '@/lib/hooks/useProviders'
 import { useBookings, useConfirmBooking, useRejectBooking } from '@/lib/hooks/useBookings'
 import { formatPrice, SERVICE_TYPE_LABELS, DAYS_OF_WEEK, type ServiceType } from '@/lib/providers'
+import { useEffect } from 'react'
+import { DeniedToast } from '@/components/ui/denied-toast'
 
 const SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string }[] = [
   { value: 'GROOMING', label: 'Banho & Tosa' },
@@ -58,6 +60,7 @@ type EditFormValues = z.infer<typeof editSchema>
 
 export default function ProviderDashboardPage() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const { data: profile, isLoading, error } = useMyProviderProfile()
   const updateProfile = useUpdateProviderProfile()
   const { data: pendingBookings = [] } = useBookings('PENDING')
@@ -123,6 +126,7 @@ export default function ProviderDashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <DeniedToast />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>

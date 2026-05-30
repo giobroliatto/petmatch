@@ -8,9 +8,40 @@ import {
 import { register, login, forgotPassword, resetPassword } from './auth.service.js'
 import { prisma } from '../../lib/prisma.js'
 
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+// Rate limit configs — relaxed in dev
+const loginRateLimit = {
+  config: {
+    rateLimit: {
+      max: IS_DEV ? 1000 : 10,
+      timeWindow: 15 * 60 * 1000, // 15 min
+      errorResponseBuilder: (_req: unknown, context: { after: string }) => ({
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message: `Muitas tentativas de login. Tente novamente em ${context.after}.`,
+      }),
+    },
+  },
+}
+
+const slowRateLimit = {
+  config: {
+    rateLimit: {
+      max: IS_DEV ? 1000 : 5,
+      timeWindow: 60 * 60 * 1000, // 1 hour
+      errorResponseBuilder: (_req: unknown, context: { after: string }) => ({
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message: `Muitas tentativas. Tente novamente em ${context.after}.`,
+      }),
+    },
+  },
+}
+
 export async function authRoutes(fastify: FastifyInstance) {
   // POST /auth/register
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', slowRateLimit, async (request, reply) => {
     const parsed = RegisterInputSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({ errors: parsed.error.flatten().fieldErrors })
@@ -20,7 +51,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   })
 
   // POST /auth/login
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', loginRateLimit, async (request, reply) => {
     const parsed = LoginInputSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({ errors: parsed.error.flatten().fieldErrors })
@@ -32,7 +63,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   })
 
   // POST /auth/forgot-password
-  fastify.post('/auth/forgot-password', async (request, reply) => {
+  fastify.post('/auth/forgot-password', slowRateLimit, async (request, reply) => {
     const parsed = ForgotPasswordInputSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({ errors: parsed.error.flatten().fieldErrors })

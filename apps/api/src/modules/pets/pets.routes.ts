@@ -16,11 +16,13 @@ import {
   getUpcomingHealthReminders,
 } from './pets.service.js'
 import { getEmbeddingQueue } from '../ai/workers.js'
+import { validateFileMime, validateFileSize, ALLOWED_IMAGE_MIMES } from '../../lib/file-validation.js'
 
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024 // 10MB multipart limit
 type PhotoFile = { buffer: Buffer; contentType: string; filename: string }
 
 export async function petsRoutes(fastify: FastifyInstance) {
-  await fastify.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } })
+  await fastify.register(multipart, { limits: { fileSize: MAX_PHOTO_SIZE } })
 
   const auth = { onRequest: [fastify.authenticate] }
 
@@ -39,7 +41,9 @@ export async function petsRoutes(fastify: FastifyInstance) {
     for await (const part of parts) {
       if (part.type === 'file') {
         const buffer = await part.toBuffer()
-        photoFile = { buffer, contentType: part.mimetype, filename: part.filename }
+        validateFileSize(buffer, MAX_PHOTO_SIZE)
+        const mime = await validateFileMime(buffer, ALLOWED_IMAGE_MIMES)
+        photoFile = { buffer, contentType: mime, filename: part.filename }
       } else {
         fields[part.fieldname] = part.value as string
       }
@@ -75,7 +79,9 @@ export async function petsRoutes(fastify: FastifyInstance) {
     for await (const part of parts) {
       if (part.type === 'file') {
         const buffer = await part.toBuffer()
-        photoFile = { buffer, contentType: part.mimetype, filename: part.filename }
+        validateFileSize(buffer, MAX_PHOTO_SIZE)
+        const mime = await validateFileMime(buffer, ALLOWED_IMAGE_MIMES)
+        photoFile = { buffer, contentType: mime, filename: part.filename }
       } else {
         fields[part.fieldname] = part.value as string
       }

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useBookings } from '@/lib/hooks/useBookings'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/bookings'
+import { DeniedToast } from '@/components/ui/denied-toast'
 
 export default function TutorDashboardPage() {
   const { data: session } = useSession()
@@ -25,6 +26,7 @@ export default function TutorDashboardPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
+      <DeniedToast />
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Olá, {firstName} 👋</h1>
         <p className="text-muted-foreground mt-1">O que você precisa hoje para o seu pet?</p>

@@ -13,13 +13,13 @@ import {
 } from './providers.service.js'
 import { matchProviders } from '../ai/matching.service.js'
 import { getEmbeddingQueue } from '../ai/workers.js'
+import { validateFileMime, validateFileSize, ALLOWED_IMAGE_MIMES, ALLOWED_DOC_MIMES } from '../../lib/file-validation.js'
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const ALLOWED_DOC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024 // 10MB (multipart limit; service enforces 5MB)
+const MAX_DOC_SIZE = 5 * 1024 * 1024   // 5MB
 
 export async function providersRoutes(fastify: FastifyInstance) {
-  await fastify.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } })
+  await fastify.register(multipart, { limits: { fileSize: MAX_PHOTO_SIZE } })
 
   const auth = { onRequest: [fastify.authenticate] }
 
@@ -84,15 +84,11 @@ export async function providersRoutes(fastify: FastifyInstance) {
   fastify.post('/providers/me/gallery', auth, async (req, reply) => {
     const data = await req.file()
     if (!data) return reply.status(400).send({ error: 'Nenhum arquivo enviado' })
-    if (!ALLOWED_IMAGE_TYPES.includes(data.mimetype)) {
-      return reply.status(400).send({ error: 'Tipo de arquivo não permitido. Use JPG, PNG ou WebP.' })
-    }
     const buffer = await data.toBuffer()
-    if (buffer.byteLength > MAX_FILE_SIZE) {
-      return reply.status(400).send({ error: 'Arquivo muito grande. Máximo 5MB.' })
-    }
     try {
-      const url = await uploadGalleryPhoto(req.user.sub, buffer, data.mimetype)
+      validateFileSize(buffer, MAX_PHOTO_SIZE)
+      const mime = await validateFileMime(buffer, ALLOWED_IMAGE_MIMES)
+      const url = await uploadGalleryPhoto(req.user.sub, buffer, mime)
       return reply.send({ url })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao fazer upload'
@@ -117,15 +113,11 @@ export async function providersRoutes(fastify: FastifyInstance) {
   fastify.post('/providers/me/verification', auth, async (req, reply) => {
     const data = await req.file()
     if (!data) return reply.status(400).send({ error: 'Nenhum arquivo enviado' })
-    if (!ALLOWED_DOC_TYPES.includes(data.mimetype)) {
-      return reply.status(400).send({ error: 'Tipo de arquivo não permitido. Use JPG, PNG, WebP ou PDF.' })
-    }
     const buffer = await data.toBuffer()
-    if (buffer.byteLength > MAX_FILE_SIZE) {
-      return reply.status(400).send({ error: 'Arquivo muito grande. Máximo 5MB.' })
-    }
     try {
-      await submitVerification(req.user.sub, buffer, data.mimetype)
+      validateFileSize(buffer, MAX_DOC_SIZE)
+      const mime = await validateFileMime(buffer, ALLOWED_DOC_MIMES)
+      await submitVerification(req.user.sub, buffer, mime)
       return reply.send({ ok: true })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao enviar documento'
