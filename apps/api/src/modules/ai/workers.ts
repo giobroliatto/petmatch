@@ -5,9 +5,11 @@ import { prisma } from '../../lib/prisma.js'
 import {
   sendNewBookingRequestEmail,
   sendBookingConfirmationEmail,
+  sendBookingConfirmationProviderEmail,
   sendBookingRejectedEmail,
   sendReviewRequestEmail,
   sendMessageNotificationEmail,
+  sendBookingReminderEmail,
 } from '../../lib/email.js'
 
 function getRedisConnectionOptions() {
@@ -86,13 +88,6 @@ export function startWorkers(): void {
     'emails',
     async job => {
       try {
-        // Guard: skip if key is a placeholder
-        const apiKey = process.env.RESEND_API_KEY ?? ''
-        if (!apiKey || apiKey.includes('qualquer')) {
-          console.log(`[BullMQ][Email] Stub (key not configured) — job "${job.name}"`)
-          return
-        }
-
         if (job.name === 'new-booking-request') {
           const booking = await prisma.booking.findUnique({
             where: { id: job.data.bookingId as string },
@@ -125,7 +120,7 @@ export function startWorkers(): void {
             },
           })
           if (!booking) return
-          await sendBookingConfirmationEmail(booking.tutor.user.email, {
+          const details = {
             bookingId: booking.id,
             serviceName: booking.service.name,
             providerName: booking.provider.user.name ?? '',
@@ -133,7 +128,12 @@ export function startWorkers(): void {
             petName: booking.pet.name,
             scheduledAt: booking.scheduledAt,
             totalPrice: booking.totalPrice,
-          })
+          }
+          // Notify tutor (confirmation) AND provider (their own confirmation record)
+          await Promise.all([
+            sendBookingConfirmationEmail(booking.tutor.user.email, details),
+            sendBookingConfirmationProviderEmail(booking.provider.user.email, details),
+          ])
         } else if (job.name === 'booking-rejected') {
           const booking = await prisma.booking.findUnique({
             where: { id: job.data.bookingId as string },
@@ -175,6 +175,27 @@ export function startWorkers(): void {
             scheduledAt: booking.scheduledAt,
             totalPrice: booking.totalPrice,
           })
+        } else if (job.name === 'reminder-24h' || job.name === 'reminder-2h') {
+          const booking = await prisma.booking.findUnique({
+            where: { id: job.data.bookingId as string },
+            include: {
+              service: true,
+              pet: true,
+              tutor: { include: { user: true } },
+              provider: { include: { user: true } },
+            },
+          })
+          if (!booking) return
+          const hoursAhead = job.name === 'reminder-24h' ? 24 : 2
+          await sendBookingReminderEmail(booking.tutor.user.email, {
+            bookingId: booking.id,
+            serviceName: booking.service.name,
+            providerName: booking.provider.user.name ?? '',
+            tutorName: booking.tutor.user.name ?? '',
+            petName: booking.pet.name,
+            scheduledAt: booking.scheduledAt,
+            totalPrice: booking.totalPrice,
+          }, hoursAhead)
         } else if (job.name === 'message-notification') {
           const recipient = await prisma.user.findUnique({
             where: { id: job.data.recipientId as string },

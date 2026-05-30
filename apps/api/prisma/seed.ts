@@ -56,6 +56,8 @@ async function main() {
           // Simula documento de verificação enviado (sem R2 real)
           verificationDocumentUrl: 'https://example.com/doc-placeholder.pdf',
           verificationSubmittedAt: new Date(),
+          verified: true,
+          verifiedAt: new Date(),
           services: {
             create: [
               {

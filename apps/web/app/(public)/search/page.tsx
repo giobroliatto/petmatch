@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, SlidersHorizontal, Loader2, SearchX } from 'lucide-react'
+import { Sparkles, SlidersHorizontal, Loader2, SearchX, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,7 @@ export default function SearchPage() {
   const [aiQuery, setAiQuery] = useState('')
   const [aiPetId, setAiPetId] = useState('')
   const [aiResults, setAiResults] = useState<ProviderCardData[]>([])
+  const [aiSearched, setAiSearched] = useState(false)
 
   // Filter mode state
   const [filters, setFilters] = useState<SearchFilters>({})
@@ -47,12 +48,14 @@ export default function SearchPage() {
 
   async function handleAISearch() {
     if (!aiQuery.trim() || !aiPetId) return
+    setAiSearched(false)
     try {
       const results = await matchMutation.mutateAsync({ naturalLanguageQuery: aiQuery, petId: aiPetId })
       setAiResults(results)
     } catch {
-      // Silently fall back to empty results
       setAiResults([])
+    } finally {
+      setAiSearched(true)
     }
   }
 
@@ -256,6 +259,27 @@ export default function SearchPage() {
         )}
 
         {/* Results */}
+        {mode === 'ai' && matchMutation.isError && (
+          <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive text-sm mb-6">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>
+              {matchMutation.error instanceof Error
+                ? matchMutation.error.message
+                : 'Erro ao buscar prestadores. Tente novamente.'}
+            </span>
+          </div>
+        )}
+
+        {mode === 'ai' && aiSearched && !matchMutation.isError && aiResults.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <SearchX className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="font-medium">Nenhum prestador encontrado</p>
+            <p className="text-sm mt-1">
+              Tente reformular sua descrição ou verifique se há prestadores verificados na sua cidade.
+            </p>
+          </div>
+        )}
+
         {mode === 'ai' && aiResults.length > 0 && (
           <>
             <div className="flex items-center gap-2 mb-4">

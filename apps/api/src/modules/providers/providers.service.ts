@@ -102,11 +102,9 @@ export async function updateMyProviderProfile(userId: string, data: UpdateProvid
 }
 
 export async function listFeaturedProviders(city: string) {
-  return prisma.providerProfile.findMany({
+  const rows = await prisma.providerProfile.findMany({
     where: {
       city: { contains: city, mode: 'insensitive' },
-      averageRating: { gte: 4.5 },
-      totalReviews: { gte: 5 },
       verified: true,
     },
     include: {
@@ -116,6 +114,20 @@ export async function listFeaturedProviders(city: string) {
     orderBy: { averageRating: 'desc' },
     take: 10,
   })
+
+  return rows.map(p => ({
+    id: p.id,
+    name: p.user.name,
+    avatarUrl: p.user.avatarUrl ?? null,
+    city: p.city,
+    averageRating: p.averageRating,
+    totalReviews: p.totalReviews,
+    serviceTypes: p.serviceTypes,
+    qualityTags: p.qualityTags,
+    verified: p.verified,
+    minPrice: p.services.length > 0 ? Math.min(...p.services.map(s => s.price)) : null,
+    services: p.services,
+  }))
 }
 
 // ─── Gallery ──────────────────────────────────────────────────────────────────
@@ -128,6 +140,7 @@ export async function uploadGalleryPhoto(userId: string, buffer: Buffer, mimeTyp
   const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'
   const key = `gallery/${provider.id}/${Date.now()}.${ext}`
   const url = await uploadFile(key, buffer, mimeType)
+  if (!url) throw new Error('R2 não configurado — upload indisponível em desenvolvimento sem credenciais')
 
   await prisma.providerProfile.update({
     where: { id: provider.id },
@@ -161,6 +174,7 @@ export async function submitVerification(userId: string, buffer: Buffer, mimeTyp
   const ext = mimeType === 'image/png' ? 'png' : mimeType === 'application/pdf' ? 'pdf' : 'jpg'
   const key = `verifications/${provider.id}/${Date.now()}.${ext}`
   const url = await uploadFile(key, buffer, mimeType)
+  if (!url) throw new Error('R2 não configurado — upload indisponível em desenvolvimento sem credenciais')
 
   await prisma.providerProfile.update({
     where: { id: provider.id },

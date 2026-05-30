@@ -22,12 +22,23 @@ export interface MatchResult {
   matchReason: string
 }
 
-const SYSTEM_PROMPT = `You are a pet service matching assistant. Given a tutor's request and a list of available providers, rank the providers from most to least suitable and explain briefly why each one matches.
+const SYSTEM_PROMPT = `Você é um assistente de matching de serviços para pets. Dado o pedido de um tutor e o perfil do pet, ordene os prestadores do mais ao menos adequado.
 
-Return a JSON array with this structure:
-[{ "providerId": "...", "matchScore": 0-100, "matchReason": "brief explanation in Portuguese" }]
+Retorne um array JSON com esta estrutura — APENAS o array, sem texto extra:
+[{ "providerId": "...", "matchScore": 0-100, "matchReason": "explicação breve em português" }]
 
-Return ONLY the JSON array, no other text.`
+Critérios de pontuação (aplique todos):
+1. SERVIÇOS (peso DECISIVO): o prestador oferece o tipo de serviço que o tutor pediu?
+   - SIM → score começa em 60+
+   - NÃO → score máximo é 15. NÃO mostre prestadores sem o serviço solicitado, dê score 0-10.
+2. TAGS DE QUALIDADE: as qualityTags batem com as necessidades do pet? Cada tag relevante +10 pts.
+3. AVALIAÇÃO: averageRating >= 4.5 → +10 pts; >= 4.0 → +5 pts.
+4. BIO: menciona características relevantes? → +5 a +10 pts.
+
+REGRA IMPORTANTE: Se o tutor pede "passeio" e o prestador só tem "veterinário", o score deve ser 0 ou 5. Não inclua prestadores irrelevantes.
+
+Na matchReason, mencione especificamente qual serviço e/ou tag bateu com o pedido. Se não bater, diga "Não oferece o serviço solicitado."
+`
 
 async function rerankWithClaude(
   query: string,
@@ -36,10 +47,12 @@ async function rerankWithClaude(
     providerId: string
     name: string
     bio: string
+    services: string
     serviceTypes: string[]
     qualityTags: string[]
     city: string | null
     averageRating: number
+    totalReviews: number
   }>,
 ): Promise<Array<{ providerId: string; matchScore: number; matchReason: string }>> {
   const anthropic = getAnthropic()
@@ -60,7 +73,10 @@ ${JSON.stringify(providers, null, 2)}`
   const block = response.content[0]
   if (block.type !== 'text') throw new Error('Unexpected response type from Claude')
 
-  return JSON.parse(block.text.trim()) as Array<{
+  // Strip markdown code fences if present (e.g. ```json ... ```)
+  const raw = block.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+
+  return JSON.parse(raw) as Array<{
     providerId: string
     matchScore: number
     matchReason: string
@@ -85,14 +101,46 @@ export async function matchProviders(input: {
   })
   if (!pet) throw new Error('Pet não encontrado')
 
-  // Get or generate pet embedding
-  let petEmbedding = await getPetEmbeddingFromDB(input.petId)
+  // Get or generate pet embedding — fall back to traditional search if Voyage AI is unavailable
+  let petEmbedding: number[] | null = await getPetEmbeddingFromDB(input.petId)
   if (!petEmbedding) {
-    petEmbedding = await generatePetEmbedding(input.petId)
+    try {
+      petEmbedding = await generatePetEmbedding(input.petId)
+    } catch {
+      console.warn('[Matching] Could not generate pet embedding — falling back to traditional search')
+    }
   }
 
-  // Find similar providers via pgvector (top 20)
-  const candidates = await findSimilarProviders(petEmbedding, 20)
+  // Build traditional search helper (used as fallback)
+  async function traditionalSearch() {
+    const city = (input.city ?? tutorProfile.city ?? '').toLowerCase()
+    return prisma.providerProfile.findMany({
+      where: {
+        verified: true,
+        ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...(input.serviceType ? { serviceTypes: { has: input.serviceType } } : {}),
+      },
+      select: {
+        id: true, userId: true, bio: true, city: true, state: true,
+        averageRating: true, totalReviews: true, serviceTypes: true,
+        qualityTags: true, verified: true, radiusKm: true,
+      },
+      orderBy: { averageRating: 'desc' },
+      take: 20,
+    })
+  }
+
+  // Vector search (when embedding available) — fall back to traditional if no embeddings in DB
+  let candidates: Awaited<ReturnType<typeof findSimilarProviders>>
+  if (petEmbedding) {
+    candidates = await findSimilarProviders(petEmbedding, 20)
+    if (candidates.length === 0) {
+      console.log('[Matching] Vector search returned 0 — providers may lack embeddings, falling back to traditional search')
+      candidates = await traditionalSearch()
+    }
+  } else {
+    candidates = await traditionalSearch()
+  }
 
   // Hard filters: verified, city, serviceType
   const city = (input.city ?? tutorProfile.city ?? '').toLowerCase()
@@ -118,26 +166,35 @@ export async function matchProviders(input: {
   const petAge = pet.birthDate
     ? `${Math.floor((Date.now() - pet.birthDate.getTime()) / (1000 * 60 * 60 * 24 * 365))} anos`
     : null
-  const petText = [pet.name, pet.species, pet.breed, petAge, pet.notes]
-    .filter(Boolean)
-    .join(', ')
+  const petText = [
+    `Nome: ${pet.name}`,
+    `Espécie: ${pet.species}`,
+    pet.breed ? `Raça: ${pet.breed}` : null,
+    petAge ? `Idade: ${petAge}` : null,
+    pet.weightKg ? `Peso: ${pet.weightKg}kg` : null,
+    pet.neutered ? 'Castrado: sim' : 'Castrado: não',
+    pet.notes ? `Observações do tutor: ${pet.notes}` : null,
+  ].filter(Boolean).join('. ')
 
-  // Build provider list for Claude
+  // Build provider list for Claude — include service names for better matching
   const providerList = providerDetails.map(p => ({
     providerId: p.id,
     name: p.user.name,
     bio: p.bio ?? '',
+    services: p.services.map(s => `${s.name} (R$${s.price})`).join(', '),
     serviceTypes: p.serviceTypes,
     qualityTags: p.qualityTags,
     city: p.city,
     averageRating: p.averageRating,
+    totalReviews: p.totalReviews,
   }))
 
   // AI re-ranking with fallback
   let rankings: Array<{ providerId: string; matchScore: number; matchReason: string }>
   try {
     rankings = await rerankWithClaude(input.naturalLanguageQuery, petText, providerList)
-  } catch {
+  } catch (err) {
+    console.error('[Matching] Claude reranking failed:', err instanceof Error ? err.message : err)
     rankings = providerList.map((p, i) => ({
       providerId: p.providerId,
       matchScore: Math.max(50, 85 - i * 5),
@@ -145,10 +202,15 @@ export async function matchProviders(input: {
     }))
   }
 
+  // Filter out providers with very low score (irrelevant to the query)
+  const SCORE_THRESHOLD = 25
+  rankings = rankings.filter(r => r.matchScore >= SCORE_THRESHOLD)
+
   // Merge rankings with full provider data
   const detailsMap = new Map(providerDetails.map(p => [p.id, p]))
 
   return rankings
+    .sort((a, b) => b.matchScore - a.matchScore)
     .slice(0, 10)
     .map(r => {
       const p = detailsMap.get(r.providerId)

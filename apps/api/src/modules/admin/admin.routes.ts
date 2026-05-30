@@ -6,6 +6,7 @@ import {
   rejectVerification,
   listUsers,
   suspendUser,
+  getDiagnostics,
 } from './admin.service.js'
 
 function requireAdmin(fastify: FastifyInstance) {
@@ -26,6 +27,12 @@ export async function adminRoutes(fastify: FastifyInstance) {
   fastify.get('/admin/stats', requireAdmin(fastify), async (_req, reply) => {
     const stats = await getPlatformStats()
     return reply.send(stats)
+  })
+
+  // GET /admin/diagnostics
+  fastify.get('/admin/diagnostics', requireAdmin(fastify), async (_req, reply) => {
+    const diagnostics = await getDiagnostics()
+    return reply.send(diagnostics)
   })
 
   // GET /admin/verifications

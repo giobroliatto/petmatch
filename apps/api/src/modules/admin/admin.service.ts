@@ -117,3 +117,37 @@ export async function suspendUser(userId: string, reason: string) {
   await prisma.user.update({ where: { id: userId }, data: { suspended: true } })
   await sendUserSuspendedEmail(user.email, user.name, reason)
 }
+
+export async function getDiagnostics() {
+  const [totalProviders, providersWithEmbedding, totalPets, petsWithEmbedding] =
+    await prisma.$transaction([
+      prisma.providerProfile.count(),
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*)::bigint AS count FROM "ProviderProfile" WHERE embedding IS NOT NULL
+      `.then(r => Number(r[0].count)),
+      prisma.pet.count(),
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*)::bigint AS count FROM "Pet" WHERE embedding IS NOT NULL
+      `.then(r => Number(r[0].count)),
+    ])
+
+  return {
+    providers: {
+      total: totalProviders,
+      withEmbedding: providersWithEmbedding,
+      withoutEmbedding: totalProviders - (providersWithEmbedding as unknown as number),
+    },
+    pets: {
+      total: totalPets,
+      withEmbedding: petsWithEmbedding,
+      withoutEmbedding: totalPets - (petsWithEmbedding as unknown as number),
+    },
+    integrations: {
+      r2: !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID),
+      resend: !!(process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.includes('qualquer')),
+      voyageAi: !!process.env.VOYAGE_API_KEY,
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      smtp: { host: process.env.SMTP_HOST ?? 'localhost', port: process.env.SMTP_PORT ?? '1025' },
+    },
+  }
+}

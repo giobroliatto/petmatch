@@ -40,7 +40,7 @@ export async function createPet(
 
   if (photoFile) {
     const key = `pets/${userId}/${Date.now()}-${photoFile.filename}`
-    photoUrl = await uploadFile(key, photoFile.buffer, photoFile.contentType)
+    photoUrl = await uploadFile(key, photoFile.buffer, photoFile.contentType) ?? undefined
   }
 
   return prisma.pet.create({
@@ -70,7 +70,7 @@ export async function updatePet(
       await deleteFile(keyFromUrl(pet.photoUrl)).catch(() => {})
     }
     const key = `pets/${userId}/${Date.now()}-${photoFile.filename}`
-    photoUrl = await uploadFile(key, photoFile.buffer, photoFile.contentType)
+    photoUrl = await uploadFile(key, photoFile.buffer, photoFile.contentType) ?? undefined
   }
 
   return prisma.pet.update({

@@ -158,6 +158,18 @@ export async function confirmBooking(id: string, userId: string) {
     .add('booking-confirmed', { bookingId: id })
     .catch(() => {})
 
+  // Schedule reminder emails based on scheduledAt
+  const now = Date.now()
+  const scheduledMs = updated.scheduledAt.getTime()
+  const delay24h = scheduledMs - 24 * 60 * 60 * 1000 - now
+  const delay2h = scheduledMs - 2 * 60 * 60 * 1000 - now
+  if (delay24h > 0) {
+    getEmailQueue().add('reminder-24h', { bookingId: id }, { delay: delay24h }).catch(() => {})
+  }
+  if (delay2h > 0) {
+    getEmailQueue().add('reminder-2h', { bookingId: id }, { delay: delay2h }).catch(() => {})
+  }
+
   return updated
 }
 

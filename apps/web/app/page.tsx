@@ -12,11 +12,11 @@ async function fetchFeaturedProviders(): Promise<ProviderCardData[]> {
   try {
     const res = await fetch(
       `${API_URL}/providers/featured/Balne%C3%A1rio%20Cambori%C3%BA`,
-      { next: { revalidate: 3600 } },
+      { cache: 'no-store' },
     )
     if (!res.ok) return []
     const data = (await res.json()) as { providers: ProviderCardData[] }
-    return data.providers.slice(0, 6)
+    return data.providers.filter(p => p.name).slice(0, 6)
   } catch {
     return []
   }
@@ -135,7 +135,7 @@ export default async function Home() {
                         <img src={provider.avatarUrl} alt={provider.name} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
                         <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
-                          {provider.name.charAt(0).toUpperCase()}
+                          {provider.name?.charAt(0).toUpperCase() ?? '?'}
                         </div>
                       )}
                       <div className="min-w-0">

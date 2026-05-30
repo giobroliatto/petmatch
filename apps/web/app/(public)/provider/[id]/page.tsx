@@ -8,13 +8,13 @@ import { Separator } from '@/components/ui/separator'
 import { SERVICE_TYPE_LABELS, DAYS_OF_WEEK, formatPrice } from '@/lib/providers'
 import type { ProviderFullProfile } from '@/lib/providers'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 async function fetchProvider(id: string): Promise<ProviderFullProfile | null> {
   try {
-    const res = await fetch(`${API_URL}/providers/${id}`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_URL}/providers/${id}`, { cache: 'no-store' })
     if (!res.ok) return null
     const data = (await res.json()) as { provider: ProviderFullProfile }
     return data.provider
