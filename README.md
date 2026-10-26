@@ -20,7 +20,7 @@
 **English** · [Português](README.pt-BR.md)
 
 > [!NOTE]
-> PetMatch is an MVP I built in 2026 and never took to production. It runs locally with the steps below, but there is no deployed version and no automated test suite yet. It was designed for the Brazilian market, starting with Balneário Camboriú, so the UI, the prompts and the code comments are in Portuguese.
+> PetMatch is built for the Brazilian market, starting with Balneário Camboriú, so the UI, the prompts and the code comments are in Portuguese.
 
 ![PetMatch home page](docs/home.png)
 
@@ -159,7 +159,7 @@ packages/
 └── shared/                # Zod schemas and types
 ```
 
-## What's missing
+## Roadmap
 
 - Automated tests (unit and end-to-end)
 - Deployment (the API and workers need a host with Redis, and the database needs pgvector)

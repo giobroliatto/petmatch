@@ -19,9 +19,6 @@
 
 [English](README.md) · **Português**
 
-> [!NOTE]
-> O PetMatch é um MVP que desenvolvi em 2026 e não chegou a ir para produção. Ele roda localmente com os passos abaixo, mas não há versão publicada nem testes automatizados ainda. Foi pensado para o mercado brasileiro, começando por Balneário Camboriú.
-
 ![Página inicial do PetMatch](docs/home.png)
 
 ---
@@ -159,7 +156,7 @@ packages/
 └── shared/                # Schemas Zod e tipos
 ```
 
-## O que falta
+## Próximos passos
 
 - Testes automatizados (unitários e end-to-end)
 - Deploy (a API e os workers precisam de um host com Redis, e o banco precisa de pgvector)
