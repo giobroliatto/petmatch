@@ -94,6 +94,7 @@ export async function matchProviders(input: {
   // Resolve tutor profile
   const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId: input.userId } })
   if (!tutorProfile) throw new Error('Perfil de tutor não encontrado')
+  const tutorCity = tutorProfile.city
 
   // Verify pet ownership
   const pet = await prisma.pet.findFirst({
@@ -113,7 +114,7 @@ export async function matchProviders(input: {
 
   // Build traditional search helper (used as fallback)
   async function traditionalSearch() {
-    const city = (input.city ?? tutorProfile.city ?? '').toLowerCase()
+    const city = (input.city ?? tutorCity ?? '').toLowerCase()
     return prisma.providerProfile.findMany({
       where: {
         verified: true,

@@ -9,7 +9,7 @@ export async function getPlatformStats() {
     bookingsByStatus,
     bookingsThisMonth,
     pendingVerifications,
-  ] = await prisma.$transaction([
+  ] = await Promise.all([
     prisma.user.count(),
     prisma.providerProfile.count(),
     prisma.booking.count(),
@@ -120,7 +120,7 @@ export async function suspendUser(userId: string, reason: string) {
 
 export async function getDiagnostics() {
   const [totalProviders, providersWithEmbedding, totalPets, petsWithEmbedding] =
-    await prisma.$transaction([
+    await Promise.all([
       prisma.providerProfile.count(),
       prisma.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(*)::bigint AS count FROM "ProviderProfile" WHERE embedding IS NOT NULL
@@ -135,12 +135,12 @@ export async function getDiagnostics() {
     providers: {
       total: totalProviders,
       withEmbedding: providersWithEmbedding,
-      withoutEmbedding: totalProviders - (providersWithEmbedding as unknown as number),
+      withoutEmbedding: totalProviders - providersWithEmbedding,
     },
     pets: {
       total: totalPets,
       withEmbedding: petsWithEmbedding,
-      withoutEmbedding: totalPets - (petsWithEmbedding as unknown as number),
+      withoutEmbedding: totalPets - petsWithEmbedding,
     },
     integrations: {
       r2: !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID),
