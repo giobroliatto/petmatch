@@ -3,7 +3,7 @@ import { PawPrint, Search, Star, Shield, CalendarCheck, ChevronRight } from 'luc
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatPrice } from '@/lib/providers'
+import { SERVICE_TYPE_LABELS, formatPrice } from '@/lib/providers'
 import type { ProviderCardData } from '@/lib/providers'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -149,7 +149,7 @@ export default async function Home() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {provider.serviceTypes.slice(0, 3).map(type => (
-                        <Badge key={type} variant="secondary" className="text-xs">{type}</Badge>
+                        <Badge key={type} variant="secondary" className="text-xs">{SERVICE_TYPE_LABELS[type] ?? type}</Badge>
                       ))}
                     </div>
                     {provider.services && provider.services[0] && (
