@@ -35,7 +35,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { useMyProviderProfile, useUpdateProviderProfile } from '@/lib/hooks/useProviders'
 import { useBookings, useConfirmBooking, useRejectBooking } from '@/lib/hooks/useBookings'
 import { formatPrice, SERVICE_TYPE_LABELS, DAYS_OF_WEEK, type ServiceType } from '@/lib/providers'
-import { useEffect } from 'react'
 import { DeniedToast } from '@/components/ui/denied-toast'
 
 const SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string }[] = [
@@ -56,11 +55,11 @@ const editSchema = z.object({
   radiusKm: z.coerce.number().positive().max(100).optional(),
   serviceTypes: z.array(z.string()).optional(),
 })
-type EditFormValues = z.infer<typeof editSchema>
+type EditFormInput = z.input<typeof editSchema>
+type EditFormValues = z.output<typeof editSchema>
 
 export default function ProviderDashboardPage() {
   const { data: session } = useSession()
-  const searchParams = useSearchParams()
   const { data: profile, isLoading, error } = useMyProviderProfile()
   const updateProfile = useUpdateProviderProfile()
   const { data: pendingBookings = [] } = useBookings('PENDING')
@@ -74,8 +73,8 @@ export default function ProviderDashboardPage() {
     isToday(new Date(b.scheduledAt)),
   )
 
-  const form = useForm<EditFormValues>({
-    resolver: zodResolver(editSchema as any),
+  const form = useForm<EditFormInput, unknown, EditFormValues>({
+    resolver: zodResolver(editSchema),
     values: profile
       ? {
           bio: profile.bio ?? '',
@@ -558,7 +557,7 @@ export default function ProviderDashboardPage() {
                     <FormItem>
                       <FormLabel>Raio de atendimento (km)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} max={100} {...field} />
+                        <Input type="number" min={1} max={100} {...field} value={(field.value as number | undefined) ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

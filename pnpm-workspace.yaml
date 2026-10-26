@@ -10,3 +10,7 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
+packageExtensions:
+  '@hookform/resolvers':
+    peerDependencies:
+      zod: '*'

@@ -77,6 +77,7 @@ export interface MyProviderDashboard {
   city?: string | null
   state?: string | null
   verified: boolean
+  verificationDocumentUrl?: string | null
   averageRating: number
   totalReviews: number
   qualityTags: string[]

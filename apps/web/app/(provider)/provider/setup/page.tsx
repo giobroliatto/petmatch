@@ -68,8 +68,10 @@ const serviceSchema = z.object({
   homeVisit: z.boolean().default(false),
 })
 
-type ProfileValues = z.infer<typeof profileSchema>
-type ServiceValues = z.infer<typeof serviceSchema>
+type ProfileInput = z.input<typeof profileSchema>
+type ProfileValues = z.output<typeof profileSchema>
+type ServiceFormInput = z.input<typeof serviceSchema>
+type ServiceValues = z.output<typeof serviceSchema>
 
 // ─── section: profile ────────────────────────────────────────────────────────
 
@@ -77,8 +79,8 @@ function ProfileSection() {
   const { data: profile } = useMyProviderProfile()
   const updateProfile = useUpdateProviderProfile()
 
-  const form = useForm<ProfileValues>({
-    resolver: zodResolver(profileSchema as any),
+  const form = useForm<ProfileInput, unknown, ProfileValues>({
+    resolver: zodResolver(profileSchema),
     values: profile
       ? {
           bio: profile.bio ?? '',
@@ -182,7 +184,7 @@ function ProfileSection() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Raio de atendimento (km)</FormLabel>
-                    <FormControl><Input type="number" min={1} max={100} {...field} /></FormControl>
+                    <FormControl><Input type="number" min={1} max={100} {...field} value={(field.value as number | undefined) ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -246,8 +248,8 @@ function ServiceFormSheet({ open, onClose, initial }: ServiceFormSheetProps) {
   const createService = useCreateService()
   const updateService = useUpdateService()
 
-  const form = useForm<ServiceValues>({
-    resolver: zodResolver(serviceSchema as any),
+  const form = useForm<ServiceFormInput, unknown, ServiceValues>({
+    resolver: zodResolver(serviceSchema),
     values: initial
       ? { type: initial.type, name: initial.name, description: initial.description ?? '', price: initial.price, durationMin: initial.durationMin, homeVisit: initial.homeVisit }
       : { type: '', name: '', description: '', price: 0, durationMin: 60, homeVisit: false },
@@ -256,7 +258,7 @@ function ServiceFormSheet({ open, onClose, initial }: ServiceFormSheetProps) {
   async function onSubmit(values: ServiceValues) {
     try {
       if (initial) {
-        await updateService.mutateAsync({ id: initial.id, ...values } as any)
+        await updateService.mutateAsync({ id: initial.id, ...values })
         toast.success('Serviço atualizado!')
       } else {
         await createService.mutateAsync(values as ServiceInput)
@@ -336,7 +338,7 @@ function ServiceFormSheet({ open, onClose, initial }: ServiceFormSheetProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Preço (R$)</FormLabel>
-                    <FormControl><Input type="number" min={0} step={0.01} {...field} /></FormControl>
+                    <FormControl><Input type="number" min={0} step={0.01} {...field} value={(field.value as number | undefined) ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -347,7 +349,7 @@ function ServiceFormSheet({ open, onClose, initial }: ServiceFormSheetProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Duração (min)</FormLabel>
-                    <FormControl><Input type="number" min={15} step={15} {...field} /></FormControl>
+                    <FormControl><Input type="number" min={15} step={15} {...field} value={(field.value as number | undefined) ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

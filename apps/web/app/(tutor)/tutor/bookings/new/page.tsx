@@ -56,7 +56,7 @@ export default function NewBookingPage({
   const minDateTime = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)
 
   const form = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingSchema as any),
+    resolver: zodResolver(bookingSchema),
     defaultValues: { serviceId: '', petId: '', scheduledAt: '', notes: '' },
   })
 
