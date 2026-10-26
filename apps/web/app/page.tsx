@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PawPrint, Search, Star, Shield, CalendarCheck, MessageSquare, ChevronRight } from 'lucide-react'
+import { PawPrint, Search, Star, Shield, CalendarCheck, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
