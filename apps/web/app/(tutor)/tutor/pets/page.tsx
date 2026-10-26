@@ -19,10 +19,11 @@ import { usePets } from '@/lib/hooks/usePets'
 import { SPECIES_LABELS, calcAge, type Pet } from '@/lib/pets'
 
 function PetCard({ pet }: { pet: Pet }) {
+  const [now] = useState(() => Date.now())
   const hasReminder = pet.healthRecords.some((r) => {
     if (!r.nextDueDate) return false
     const due = new Date(r.nextDueDate)
-    const diff = Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const diff = Math.ceil((due.getTime() - now) / (1000 * 60 * 60 * 24))
     return diff <= 7
   })
 

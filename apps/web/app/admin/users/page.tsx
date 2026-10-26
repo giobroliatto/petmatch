@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Search, UserX, Loader2, Users } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,12 +30,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function AdminUsersPage() {
   const { data: session } = useSession()
-  const [users, setUsers] = useState<AdminUser[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
 
   const [suspendTarget, setSuspendTarget] = useState<AdminUser | null>(null)
@@ -42,21 +40,14 @@ export default function AdminUsersPage() {
 
   const token = session?.user?.accessToken ?? ''
 
-  const load = useCallback(async () => {
-    if (!token) return
-    setLoading(true)
-    try {
-      const data = await listUsers(token, page, search || undefined)
-      setUsers(data.users)
-      setTotal(data.total)
-    } catch {
-      toast.error('Erro ao carregar usuários')
-    } finally {
-      setLoading(false)
-    }
-  }, [token, page, search])
-
-  useEffect(() => { load() }, [load])
+  const queryClient = useQueryClient()
+  const usersQuery = useQuery({
+    queryKey: ['admin', 'users', page, search],
+    queryFn: () => listUsers(token, page, search || undefined),
+    enabled: !!token,
+  })
+  const users = usersQuery.data?.users ?? []
+  const total = usersQuery.data?.total ?? 0
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -70,7 +61,7 @@ export default function AdminUsersPage() {
     try {
       await suspendUser(token, suspendTarget.id, suspendReason.trim())
       toast.success(`${suspendTarget.name} suspenso.`)
-      setUsers(prev => prev.map(u => u.id === suspendTarget.id ? { ...u, suspended: true } : u))
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       setSuspendTarget(null)
       setSuspendReason('')
     } catch (err) {
@@ -102,9 +93,13 @@ export default function AdminUsersPage() {
         </Button>
       </form>
 
-      {loading ? (
+      {usersQuery.isPending ? (
         <div className="flex items-center justify-center h-40 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
+        </div>
+      ) : usersQuery.isError ? (
+        <div className="text-center py-16 text-destructive">
+          <p className="font-medium">Erro ao carregar usuários</p>
         </div>
       ) : users.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
