@@ -23,6 +23,8 @@ jobs:
         run: pnpm --filter api prisma generate
       - name: Typecheck
         run: pnpm --filter api exec tsc --noEmit
+      - name: Test
+        run: pnpm --filter api test
       - name: Build
         run: pnpm --filter api build
 
