@@ -96,7 +96,8 @@ Each new review triggers a background job in which Claude reads the provider's r
 - **Security:** JWT authentication on the API, role-based route protection on the front end (Next.js proxy), per-route rate limiting backed by Redis, and uploads validated by their actual content (magic bytes), not just the extension.
 - **Auth:** e-mail and password or Google sign-in with Auth.js (NextAuth v5), plus password reset by e-mail.
 - **Local e-mail testing** with Mailpit: every e-mail the app sends can be inspected at `localhost:8025`.
-- **CI on every push** with GitHub Actions: type checking, linting and production builds for both apps.
+- **Tests for the matching pipeline** with Vitest, covering every fallback, the hard filters and how Claude's ranking is applied.
+- **CI on every push** with GitHub Actions: type checking, tests, linting and production builds for both apps.
 
 ## Stack
 
@@ -108,6 +109,7 @@ Each new review triggers a background job in which Claude reads the provider's r
 | AI | Claude Haiku (Anthropic SDK), Voyage AI embeddings |
 | Jobs and e-mail | BullMQ, Resend (production), Nodemailer + Mailpit (development) |
 | Storage | Cloudflare R2 (S3-compatible) |
+| Tests and CI | Vitest, GitHub Actions |
 
 ## Running locally
 
@@ -132,6 +134,8 @@ pnpm --filter api seed
 # Web on http://localhost:3000, API on http://localhost:3001
 pnpm dev
 ```
+
+To run the tests: `pnpm --filter api test`.
 
 The seed creates three accounts:
 
@@ -164,7 +168,7 @@ packages/
 
 ## Roadmap
 
-- Automated tests (unit and end-to-end)
+- Tests for the remaining API modules, plus end-to-end tests
 - Deployment (the API and workers need a host with Redis, and the database needs pgvector)
 - Real-time chat (messages are currently fetched by polling)
 - Payments

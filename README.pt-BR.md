@@ -93,7 +93,8 @@ Cada nova avaliação dispara um job em segundo plano em que o Claude lê as ava
 - **Segurança:** autenticação JWT na API, proteção de rotas por papel no front (proxy do Next.js), rate limiting por rota com Redis, e uploads validados pelo conteúdo real do arquivo (magic bytes), não só pela extensão.
 - **Autenticação:** e-mail e senha ou login com Google via Auth.js (NextAuth v5), além de redefinição de senha por e-mail.
 - **Teste de e-mails local** com Mailpit: todo e-mail que o app envia pode ser visto em `localhost:8025`.
-- **CI a cada push** com GitHub Actions: checagem de tipos, lint e build de produção dos dois apps.
+- **Testes do pipeline de matching** com Vitest, cobrindo cada plano B, os filtros obrigatórios e como a ordenação do Claude é aplicada.
+- **CI a cada push** com GitHub Actions: checagem de tipos, testes, lint e build de produção dos dois apps.
 
 ## Stack
 
@@ -105,6 +106,7 @@ Cada nova avaliação dispara um job em segundo plano em que o Claude lê as ava
 | IA | Claude Haiku (SDK da Anthropic), embeddings da Voyage AI |
 | Jobs e e-mail | BullMQ, Resend (produção), Nodemailer + Mailpit (desenvolvimento) |
 | Armazenamento | Cloudflare R2 (compatível com S3) |
+| Testes e CI | Vitest, GitHub Actions |
 
 ## Rodando localmente
 
@@ -129,6 +131,8 @@ pnpm --filter api seed
 # Web em http://localhost:3000, API em http://localhost:3001
 pnpm dev
 ```
+
+Para rodar os testes: `pnpm --filter api test`.
 
 O seed cria três contas:
 
@@ -161,7 +165,7 @@ packages/
 
 ## Próximos passos
 
-- Testes automatizados (unitários e end-to-end)
+- Testes dos demais módulos da API e testes end-to-end
 - Deploy (a API e os workers precisam de um host com Redis, e o banco precisa de pgvector)
 - Chat em tempo real (hoje as mensagens são buscadas periodicamente)
 - Pagamentos
