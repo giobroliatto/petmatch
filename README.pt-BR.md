@@ -15,6 +15,8 @@
 ![Redis](https://img.shields.io/badge/Redis_+_BullMQ-DC382D?logo=redis&logoColor=white)
 ![Claude API](https://img.shields.io/badge/Claude_API-D97757?logo=anthropic&logoColor=white)
 
+[![CI](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml/badge.svg)](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml)
+
 </div>
 
 [English](README.md) · **Português**
@@ -85,12 +87,13 @@ Cada nova avaliação dispara um job em segundo plano em que o Claude lê as ava
 
 ## Destaques técnicos
 
-- **Monorepo com pnpm**: `apps/web` (Next.js), `apps/api` (Fastify) e `packages/shared` (schemas Zod e tipos compartilhados pelos dois).
+- **Monorepo com pnpm**: `apps/web` (Next.js) e `apps/api` (Fastify), além de um pacote `packages/shared` para schemas Zod e tipos.
 - **Jobs em segundo plano com BullMQ:** embeddings, análise de avaliações e e-mails transacionais (incluindo os lembretes agendados de 24h e 2h) rodam fora do ciclo da requisição.
 - **Degradação controlada:** cada integração externa (Voyage, Anthropic, Cloudflare R2, Resend) é opcional em desenvolvimento, e a página de diagnóstico do admin mostra quais estão configuradas.
 - **Segurança:** autenticação JWT na API, proteção de rotas por papel no front (proxy do Next.js), rate limiting por rota com Redis, e uploads validados pelo conteúdo real do arquivo (magic bytes), não só pela extensão.
 - **Autenticação:** e-mail e senha ou login com Google via Auth.js (NextAuth v5), além de redefinição de senha por e-mail.
 - **Teste de e-mails local** com Mailpit: todo e-mail que o app envia pode ser visto em `localhost:8025`.
+- **CI a cada push** com GitHub Actions: checagem de tipos, lint e build de produção dos dois apps.
 
 ## Stack
 

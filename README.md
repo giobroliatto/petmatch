@@ -15,6 +15,8 @@
 ![Redis](https://img.shields.io/badge/Redis_+_BullMQ-DC382D?logo=redis&logoColor=white)
 ![Claude API](https://img.shields.io/badge/Claude_API-D97757?logo=anthropic&logoColor=white)
 
+[![CI](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml/badge.svg)](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml)
+
 </div>
 
 **English** · [Português](README.pt-BR.md)
@@ -88,12 +90,13 @@ Each new review triggers a background job in which Claude reads the provider's r
 
 ## Technical highlights
 
-- **pnpm monorepo** with `apps/web` (Next.js), `apps/api` (Fastify) and `packages/shared` (Zod schemas and types shared by both).
+- **pnpm monorepo** with `apps/web` (Next.js) and `apps/api` (Fastify), plus a `packages/shared` package for Zod schemas and types.
 - **Background jobs with BullMQ:** embeddings, review analysis and transactional e-mails (including delayed 24h and 2h reminders) run outside the request cycle.
 - **Graceful degradation:** each external integration (Voyage, Anthropic, Cloudflare R2, Resend) is optional in development, and the admin diagnostics page shows which ones are configured.
 - **Security:** JWT authentication on the API, role-based route protection on the front end (Next.js proxy), per-route rate limiting backed by Redis, and uploads validated by their actual content (magic bytes), not just the extension.
 - **Auth:** e-mail and password or Google sign-in with Auth.js (NextAuth v5), plus password reset by e-mail.
 - **Local e-mail testing** with Mailpit: every e-mail the app sends can be inspected at `localhost:8025`.
+- **CI on every push** with GitHub Actions: type checking, linting and production builds for both apps.
 
 ## Stack
 
