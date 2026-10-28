@@ -16,6 +16,7 @@
 ![Claude API](https://img.shields.io/badge/Claude_API-D97757?logo=anthropic&logoColor=white)
 
 [![CI](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml/badge.svg)](https://github.com/giobroliatto/petmatch/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 </div>
 
@@ -172,6 +173,12 @@ packages/
 - Deployment (the API and workers need a host with Redis, and the database needs pgvector)
 - Real-time chat (messages are currently fetched by polling)
 - Payments
+
+---
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
